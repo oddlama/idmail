@@ -1,5 +1,6 @@
 pub mod app;
 pub mod auth;
+pub mod database;
 pub mod error_template;
 #[cfg(feature = "ssr")]
 pub mod fileserv;

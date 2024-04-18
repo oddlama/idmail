@@ -1,67 +1,20 @@
 use crate::{
-    auth::{get_user, Login, Logout, Signup, User},
+    auth::{get_user, Login, Logout, Signup},
+    database::{Alias, AliasTableDataProvider},
     error_template::ErrorTemplate,
 };
 use leptos::{
-    component, create_resource, create_server_action, create_server_multi_action, server, view, Action, CollectView,
-    ErrorBoundary, IntoView, ServerFnError, SignalGet, Transition,
+    component, create_node_ref, create_resource, create_server_action, create_server_multi_action, event_target_value,
+    html::Div, server, view, Action, CollectView, ErrorBoundary, IntoView, ServerFnError, SignalGet, SignalSet,
+    Transition,
 };
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
 use leptos_router::{ActionForm, MultiActionForm, Route, Router, Routes, A};
 use leptos_struct_table::*;
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
-#[table(sortable, classes_provider = "TailwindClassesPreset", impl_vec_data_provider)]
-pub struct Alias {
-    id: u32,
-    #[table(skip)]
-    user: Option<User>,
-    title: String,
-    created_at: String,
-    completed: bool,
-}
-
-#[cfg(feature = "ssr")]
-pub mod ssr {
-    use super::Alias;
-    use crate::auth::{ssr::AuthSession, User};
-    use leptos::*;
-    use sqlx::SqlitePool;
-
-    pub fn pool() -> Result<SqlitePool, ServerFnError> {
-        use_context::<SqlitePool>().ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
-    }
-
-    pub fn auth() -> Result<AuthSession, ServerFnError> {
-        use_context::<AuthSession>().ok_or_else(|| ServerFnError::ServerError("Auth session missing.".into()))
-    }
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct SqlAlias {
-        id: u32,
-        user_id: i64,
-        title: String,
-        created_at: String,
-        completed: bool,
-    }
-
-    impl SqlAlias {
-        pub async fn into_todo(self, pool: &SqlitePool) -> Alias {
-            Alias {
-                id: self.id,
-                user: User::get(self.user_id, pool).await,
-                title: self.title,
-                created_at: self.created_at,
-                completed: self.completed,
-            }
-        }
-    }
-}
-
-#[server(GetTodos, "/api")]
+#[server]
 pub async fn get_todos() -> Result<Vec<Alias>, ServerFnError> {
-    use self::ssr::{pool, SqlAlias};
+    use crate::database::ssr::{pool, SqlAlias};
     use futures::future::join_all;
 
     let pool = pool()?;
@@ -71,15 +24,14 @@ pub async fn get_todos() -> Result<Vec<Alias>, ServerFnError> {
             .fetch_all(&pool)
             .await?
             .iter()
-            .map(|todo: &SqlAlias| todo.clone().into_todo(&pool)),
+            .map(|todo: &SqlAlias| todo.clone().into_alias(&pool)),
     )
     .await)
 }
 
-#[server(AddTodo, "/api")]
+#[server]
 pub async fn add_todo(title: String) -> Result<(), ServerFnError> {
-    use self::ssr::*;
-
+    use crate::database::ssr::pool;
     let user = get_user().await?;
     let pool = pool()?;
 
@@ -100,8 +52,7 @@ pub async fn add_todo(title: String) -> Result<(), ServerFnError> {
 // The struct name and path prefix arguments are optional.
 #[server]
 pub async fn delete_todo(id: u16) -> Result<(), ServerFnError> {
-    use self::ssr::*;
-
+    use crate::database::ssr::pool;
     let pool = pool()?;
 
     Ok(sqlx::query("DELETE FROM todos WHERE id = $1")
@@ -140,18 +91,13 @@ pub fn App() -> impl IntoView {
                                 Err(e) => {
                                     view! {
                                         <div>
-                                            <A href="/signup" class="text-blue-400">
-                                                "Signup"
-                                            </A>
+                                            <A href="/signup" class="text-blue-400">"Signup"</A>
                                             <span class="text-gray-300">", "</span>
-                                            <A href="/login" class="text-blue-400">
-                                                "Login"
-                                            </A>
+                                            <A href="/login" class="text-blue-400">"Login"</A>
                                             <span class="text-gray-300">", "</span>
                                             <span>{format!("Login error: {}", e)}</span>
                                         </div>
-                                    }
-                                        .into_view()
+                                    }.into_view()
                                 }
                                 Ok(None) => {
                                     view! {
@@ -166,8 +112,7 @@ pub fn App() -> impl IntoView {
                                             <span class="text-gray-300">", "</span>
                                             <span>"Logged out."</span>
                                         </div>
-                                    }
-                                        .into_view()
+                                    }.into_view()
                                 }
                                 Ok(Some(user)) => {
                                     view! {
@@ -180,8 +125,7 @@ pub fn App() -> impl IntoView {
                                                 {format!("Logged in as: {} ({})", user.username, user.id)}
                                             </span>
                                         </div>
-                                    }
-                                        .into_view()
+                                    }.into_view()
                                 }
                             })
                     }}
@@ -192,7 +136,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     // Route
-                    <Route path="" view=Aliases/>
+                    <Route path="" view=HomePage/>
                     <Route path="signup" view=move || view! { <Signup action=signup/> }/>
                     <Route path="login" view=move || view! { <Login action=login/> }/>
                     <Route
@@ -214,7 +158,7 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-pub fn Aliases() -> impl IntoView {
+pub fn HomePage() -> impl IntoView {
     let add_todo = create_server_multi_action::<AddTodo>();
     let delete_todo = create_server_action::<DeleteTodo>();
     let submissions = add_todo.submissions();
@@ -224,6 +168,10 @@ pub fn Aliases() -> impl IntoView {
         move || (add_todo.version().get(), delete_todo.version().get()),
         move |_| get_todos(),
     );
+
+    let scroll_container = create_node_ref::<Div>();
+    let rows = AliasTableDataProvider::default();
+    let name = rows.name;
 
     view! {
         <MultiActionForm action=add_todo class="mb-4">
@@ -290,8 +238,40 @@ pub fn Aliases() -> impl IntoView {
                     </button>
                 </div>
 
-                <table>
-                </table>
+                <div class="flex flex-col h-[100vh] bg-white">
+                    <div class="border-b bg-slate-100 px-5 py-2">
+                        <label class="relative block">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                <svg
+                                    class="h-5 w-5 fill-black"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    x="0px"
+                                    y="0px"
+                                    width="30"
+                                    height="30"
+                                    viewBox="0 0 30 30"
+                                >
+                                    <path d="M 13 3 C 7.4889971 3 3 7.4889971 3 13 C 3 18.511003 7.4889971 23 13 23 C 15.396508 23 17.597385 22.148986 19.322266 20.736328 L 25.292969 26.707031 A 1.0001 1.0001 0 1 0 26.707031 25.292969 L 20.736328 19.322266 C 22.148986 17.597385 23 15.396508 23 13 C 23 7.4889971 18.511003 3 13 3 z M 13 5 C 17.430123 5 21 8.5698774 21 13 C 21 17.430123 17.430123 21 13 21 C 8.5698774 21 5 17.430123 5 13 C 5 8.5698774 8.5698774 5 13 5 z"></path>
+                                </svg>
+                            </span>
+                            <input
+                                class="w-full bg-white placeholder:font-italitc border border-slate-300 rounded-full py-2 pl-10 pr-4 focus:outline-none"
+                                placeholder="Search by name or company"
+                                type="text"
+                                value=name
+                                on:change=move |e| name.set(event_target_value(&e))
+                            />
+                        </label>
+                    </div>
+                    <div node_ref=scroll_container class="overflow-auto grow min-h-0">
+                        <table class="table-fixed text-sm text-left text-gray-500 dark:text-gray-400 w-full">
+                            <TableContent
+                                rows
+                                scroll_container
+                            />
+                        </table>
+                    </div>
+                </div>
 
                 <div class="rounded-md border">
                     <div class="relative w-full overflow-auto">
