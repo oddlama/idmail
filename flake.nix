@@ -52,7 +52,7 @@
       };
       inherit (pkgs) lib;
 
-      projectName = "akamail"; # FIXME: too similar to akamai.... :/
+      projectName = "idmail";
 
       rustToolchain = pkgs.pkgsBuildHost.rust-bin.nightly.latest.default.override {
         extensions = [

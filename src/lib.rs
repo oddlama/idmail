@@ -2,7 +2,7 @@ pub mod app;
 pub mod auth;
 pub mod error_template;
 #[cfg(feature = "ssr")]
-pub mod fallback;
+pub mod fileserv;
 #[cfg(feature = "ssr")]
 pub mod state;
 

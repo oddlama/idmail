@@ -1,5 +1,5 @@
 [package]
-name = "akamail"
+name = "idmail"
 version = "0.1.0"
 edition = "2021"
 authors = ["oddlama <oddlama@oddlama.org>"]
@@ -10,7 +10,7 @@ license = "MIT"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.82"
 async-trait = { version = "0.1", optional = true }
 axum = { version = "0.7", optional = true, features = ["macros"] }
 axum_session = { version = "0.12.4", features = [ "sqlite-rustls", ], optional = true }
@@ -21,6 +21,8 @@ console_log = "1.0"
 futures = "0.3"
 http = "1.0"
 leptos = { version = "0.6", features = ["nightly"] }
+leptos-struct-table = "0.9.1"
+leptos-use = "0.10"
 leptos_axum = { version = "0.6", optional = true }
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
@@ -28,13 +30,13 @@ log = "0.4"
 rand = { version = "0.8", features = ["min_const_gen"], optional = true }
 serde = { version = "1.0", features = ["derive"] }
 server_fn = { version = "0.6", features = ["serde-lite"] }
-simple_logger = "4.0"
 sqlx = { version = "0.7.2", features = [ "runtime-tokio-rustls", "sqlite", ], optional = true }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"], optional = true }
 tower = { version = "0.4", optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
 tracing = { version = "0.1", optional = true }
+tracing-subscriber = "0.3.18"
 wasm-bindgen = "0.2"
 
 [features]
@@ -54,6 +56,7 @@ ssr = [
 	"leptos/ssr",
 	"leptos_meta/ssr",
 	"leptos_router/ssr",
+	"leptos-use/ssr",
 	"dep:leptos_axum",
 ]
 
@@ -63,7 +66,7 @@ skip_feature_sets = [["ssr", "hydrate"]]
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
-output-name = "akamail"
+output-name = "idmail"
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
 # The site-root relative folder where all compiled output (JS, WASM and CSS) is written

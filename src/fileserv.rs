@@ -1,4 +1,4 @@
-use crate::{error_template::ErrorTemplate, errors::TodoAppError};
+use crate::error_template::{AppError, ErrorTemplate};
 use axum::{
     body::Body,
     extract::State,
@@ -21,7 +21,7 @@ pub async fn file_and_error_handler(
         res.into_response()
     } else {
         let mut errors = Errors::default();
-        errors.insert_with_default_key(TodoAppError::NotFound);
+        errors.insert_with_default_key(AppError::NotFound);
         let handler = leptos_axum::render_app_to_stream(
             options.to_owned(),
             move || view! {<ErrorTemplate outside_errors=errors.clone()/>},
@@ -30,14 +30,8 @@ pub async fn file_and_error_handler(
     }
 }
 
-async fn get_static_file(
-    uri: Uri,
-    root: &str,
-) -> Result<Response<Body>, (StatusCode, String)> {
-    let req = Request::builder()
-        .uri(uri.clone())
-        .body(Body::empty())
-        .unwrap();
+async fn get_static_file(uri: Uri, root: &str) -> Result<Response<Body>, (StatusCode, String)> {
+    let req = Request::builder().uri(uri.clone()).body(Body::empty()).unwrap();
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
     // This path is relative to the cargo root
     match ServeDir::new(root).oneshot(req).await {

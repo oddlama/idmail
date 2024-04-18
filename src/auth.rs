@@ -28,8 +28,8 @@ impl Default for User {
 #[cfg(feature = "ssr")]
 pub mod ssr {
     pub use super::{User, UserPasshash};
+    use anyhow::anyhow;
     pub use axum_session_auth::{Authentication, HasPermission, SessionSqlitePool};
-    use color_eyre::eyre::eyre;
     pub use sqlx::SqlitePool;
     pub use std::collections::HashSet;
     pub type AuthSession = axum_session_auth::AuthSession<User, i64, SessionSqlitePool, SqlitePool>;
@@ -92,10 +92,10 @@ pub mod ssr {
 
     #[async_trait]
     impl Authentication<User, i64, SqlitePool> for User {
-        async fn load_user(userid: i64, pool: Option<&SqlitePool>) -> Result<User, color_eyre::eyre::Error> {
+        async fn load_user(userid: i64, pool: Option<&SqlitePool>) -> Result<User, anyhow::Error> {
             let pool = pool.unwrap();
 
-            User::get(userid, pool).await.ok_or_else(|| eyre!("Cannot get user"))
+            User::get(userid, pool).await.ok_or_else(|| anyhow!("Cannot get user"))
         }
 
         fn is_authenticated(&self) -> bool {

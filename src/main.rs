@@ -59,25 +59,21 @@ async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sql
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt().without_time().init();
 
-    let pool = connect("todos.db").await.expect("Could not make pool.");
+    let pool = connect("todos.db").await?;
 
     // Auth section
     let session_config = SessionConfig::default().with_table_name("axum_sessions");
     let auth_config = AuthConfig::<i64>::default();
     let session_store =
-        SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config)
-            .await
-            .unwrap();
+        SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config).await?;
 
-    if let Err(e) = sqlx::migrate!().run(&pool).await {
-        eprintln!("{e:?}");
-    }
+    sqlx::migrate!().run(&pool).await?;
 
     // Setting this to None means we'll be using cargo-leptos and its env vars
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).await?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
