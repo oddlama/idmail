@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum::{
     body::Body as AxumBody,
     extract::{Path, State},
@@ -11,11 +12,12 @@ use axum_session_auth::{AuthConfig, AuthSessionLayer, SessionSqlitePool};
 use idmail::{
     app::App,
     auth::{ssr::AuthSession, User},
-    fallback::file_and_error_handler,
+    fileserv::file_and_error_handler,
     state::AppState,
 };
-use leptos::{get_configuration, logging::log, provide_context};
+use leptos::{get_configuration, provide_context};
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
+use log::info;
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
 async fn server_fn_handler(
@@ -24,7 +26,7 @@ async fn server_fn_handler(
     path: Path<String>,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
-    log!("{:?}", path);
+    info!("{:?}", path);
 
     handle_server_fns_with_context(
         move || {
@@ -53,9 +55,9 @@ async fn leptos_routes_handler(
     handler(req).await.into_response()
 }
 
-async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sqlx::Sqlite>, sqlx::Error> {
+async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sqlx::Sqlite>> {
     let options = SqliteConnectOptions::new().filename(filename).create_if_missing(true);
-    SqlitePool::connect_with(options).await
+    Ok(SqlitePool::connect_with(options).await?)
 }
 
 #[tokio::main]
@@ -98,7 +100,8 @@ async fn main() -> Result<()> {
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
-    log!("listening on http://{}", &addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app.into_make_service()).await.unwrap();
+    info!("listening on http://{addr}");
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    axum::serve(listener, app.into_make_service()).await?;
+    Ok(())
 }
