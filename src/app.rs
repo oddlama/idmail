@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use crate::{
+    aliases::AliasTableDataProvider,
     auth::{get_user, Login, Logout, Signup},
-    database::AliasTableDataProvider,
 };
 use leptos::*;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
