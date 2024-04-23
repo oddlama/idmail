@@ -4,43 +4,45 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct User {
-    pub id: i64,
     pub username: String,
+    pub password: String,
     pub permissions: HashSet<String>,
+    pub admin: bool,
+    pub active: bool,
+    pub created_at: String,
 }
-
-// Explicitly is not Serialize/Deserialize!
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UserPasshash(String);
 
 impl Default for User {
     fn default() -> Self {
         let permissions = HashSet::new();
 
         Self {
-            id: -1,
-            username: "Guest".into(),
+            username: "guest".to_string(),
+            password: "".to_string(),
             permissions,
+            admin: false,
+            active: true,
+            created_at: "".to_string(),
         }
     }
 }
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
-    pub use super::{User, UserPasshash};
+    pub use super::User;
     use anyhow::anyhow;
     pub use axum_session_auth::{Authentication, HasPermission, SessionSqlitePool};
     pub use sqlx::SqlitePool;
     pub use std::collections::HashSet;
-    pub type AuthSession = axum_session_auth::AuthSession<User, i64, SessionSqlitePool, SqlitePool>;
+    pub type AuthSession = axum_session_auth::AuthSession<User, String, SessionSqlitePool, SqlitePool>;
     pub use crate::database::ssr::{auth, pool};
     pub use async_trait::async_trait;
     pub use bcrypt::{hash, verify, DEFAULT_COST};
 
     impl User {
-        pub async fn get_with_passhash(id: i64, pool: &SqlitePool) -> Option<(Self, UserPasshash)> {
+        pub async fn get_with_passhash(username: &str, pool: &SqlitePool) -> Option<Self> {
             let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE id = ?")
-                .bind(id)
+                .bind(username)
                 .fetch_one(pool)
                 .await
                 .ok()?;
@@ -48,7 +50,7 @@ pub mod ssr {
             //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
             let sql_user_perms =
                 sqlx::query_as::<_, SqlPermissionTokens>("SELECT token FROM user_permissions WHERE user_id = ?;")
-                    .bind(id)
+                    .bind(username)
                     .fetch_all(pool)
                     .await
                     .ok()?;
@@ -56,11 +58,11 @@ pub mod ssr {
             Some(sqluser.into_user(Some(sql_user_perms)))
         }
 
-        pub async fn get(id: i64, pool: &SqlitePool) -> Option<Self> {
-            User::get_with_passhash(id, pool).await.map(|(user, _)| user)
+        pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
+            User::get_with_passhash(username, pool).await
         }
 
-        pub async fn get_from_username_with_passhash(name: String, pool: &SqlitePool) -> Option<(Self, UserPasshash)> {
+        pub async fn get_from_username_with_passhash(name: String, pool: &SqlitePool) -> Option<Self> {
             let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE username = ?")
                 .bind(name)
                 .fetch_one(pool)
@@ -70,7 +72,7 @@ pub mod ssr {
             //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
             let sql_user_perms =
                 sqlx::query_as::<_, SqlPermissionTokens>("SELECT token FROM user_permissions WHERE user_id = ?;")
-                    .bind(sqluser.id)
+                    .bind(&sqluser.username)
                     .fetch_all(pool)
                     .await
                     .ok()?;
@@ -79,9 +81,7 @@ pub mod ssr {
         }
 
         pub async fn get_from_username(name: String, pool: &SqlitePool) -> Option<Self> {
-            User::get_from_username_with_passhash(name, pool)
-                .await
-                .map(|(user, _)| user)
+            User::get_from_username_with_passhash(name, pool).await
         }
     }
 
@@ -91,11 +91,13 @@ pub mod ssr {
     }
 
     #[async_trait]
-    impl Authentication<User, i64, SqlitePool> for User {
-        async fn load_user(userid: i64, pool: Option<&SqlitePool>) -> Result<User, anyhow::Error> {
+    impl Authentication<User, String, SqlitePool> for User {
+        async fn load_user(username: String, pool: Option<&SqlitePool>) -> Result<User, anyhow::Error> {
             let pool = pool.unwrap();
 
-            User::get(userid, pool).await.ok_or_else(|| anyhow!("Cannot get user"))
+            User::get(&username, pool)
+                .await
+                .ok_or_else(|| anyhow!("Cannot get user"))
         }
 
         fn is_authenticated(&self) -> bool {
@@ -103,7 +105,7 @@ pub mod ssr {
         }
 
         fn is_active(&self) -> bool {
-            true
+            self.active
         }
 
         fn is_anonymous(&self) -> bool {
@@ -120,32 +122,29 @@ pub mod ssr {
 
     #[derive(sqlx::FromRow, Clone)]
     pub struct SqlUser {
-        pub id: i64,
         pub username: String,
         pub password: String,
+        pub admin: bool,
+        pub active: bool,
+        pub created_at: String,
     }
 
     impl SqlUser {
-        pub fn into_user(self, sql_user_perms: Option<Vec<SqlPermissionTokens>>) -> (User, UserPasshash) {
-            (
-                User {
-                    id: self.id,
-                    username: self.username,
-                    permissions: if let Some(user_perms) = sql_user_perms {
-                        user_perms.into_iter().map(|x| x.token).collect::<HashSet<String>>()
-                    } else {
-                        HashSet::<String>::new()
-                    },
+        pub fn into_user(self, sql_user_perms: Option<Vec<SqlPermissionTokens>>) -> User {
+            User {
+                username: self.username,
+                permissions: if let Some(user_perms) = sql_user_perms {
+                    user_perms.into_iter().map(|x| x.token).collect::<HashSet<String>>()
+                } else {
+                    HashSet::<String>::new()
                 },
-                UserPasshash(self.password),
-            )
+                password: self.password,
+                admin: self.admin,
+                active: self.active,
+                created_at: self.created_at,
+            }
         }
     }
-}
-
-#[server]
-pub async fn foo() -> Result<String, ServerFnError> {
-    Ok(String::from("Bar!"))
 }
 
 #[server]
@@ -164,13 +163,13 @@ pub async fn login(username: String, password: String, remember: Option<String>)
     let pool = pool()?;
     let auth = auth()?;
 
-    let (user, UserPasshash(expected_passhash)) = User::get_from_username_with_passhash(username, &pool)
+    let user = User::get_from_username_with_passhash(username, &pool)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist."))?;
 
-    match verify(password, &expected_passhash)? {
+    match verify(password, &user.password)? {
         true => {
-            auth.login_user(user.id);
+            auth.login_user(user.username);
             auth.remember_user(remember.is_some());
             leptos_axum::redirect("/");
             Ok(())
@@ -207,7 +206,7 @@ pub async fn signup(
         .await
         .ok_or_else(|| ServerFnError::new("Signup failed: User does not exist."))?;
 
-    auth.login_user(user.id);
+    auth.login_user(user.username);
     auth.remember_user(remember.is_some());
 
     leptos_axum::redirect("/");

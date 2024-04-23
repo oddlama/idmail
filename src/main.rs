@@ -64,11 +64,11 @@ async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sql
 async fn main() -> Result<()> {
     tracing_subscriber::fmt().without_time().init();
 
-    let pool = connect("todos.db").await?;
+    let pool = connect("aliases.db").await?;
 
     // Auth section
     let session_config = SessionConfig::default().with_table_name("axum_sessions");
-    let auth_config = AuthConfig::<i64>::default();
+    let auth_config = AuthConfig::<String>::default();
     let session_store =
         SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config).await?;
 
@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
         .leptos_routes_with_handler(routes, get(leptos_routes_handler))
         .fallback(file_and_error_handler)
         .layer(
-            AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone()))
+            AuthSessionLayer::<User, String, SessionSqlitePool, SqlitePool>::new(Some(pool.clone()))
                 .with_config(auth_config),
         )
         .layer(SessionLayer::new(session_store))
