@@ -38,11 +38,3 @@ CREATE TABLE mailboxes (
 	active     BOOL NOT NULL DEFAULT TRUE
 	-- FOREIGN KEY (owner) REFERENCES users (username) ON DELETE CASCADE
 ) WITHOUT ROWID;
-
---user admin
---user malte
---domains schmitz.sh
---domains privacymail.sh
---mailbox malte@schmitz.sh owner=malte
---alias a.b@privacymail.sh malte@schmitz.sh
---alias ccaedfaer@privacymail.sh malte@schmitz.sh

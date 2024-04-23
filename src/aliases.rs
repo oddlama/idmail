@@ -8,46 +8,23 @@ use sqlx::{QueryBuilder, Row};
 use std::collections::VecDeque;
 use std::ops::Range;
 
-#[cfg(feature = "ssr")]
-pub mod ssr {
-    use sqlx::SqlitePool;
-
-    use super::Alias;
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct SqlAlias {
-        address: String,
-        target: String,
-        comment: String,
-        created_at: String,
-        active: bool,
-    }
-
-    impl SqlAlias {
-        pub async fn into_alias(self, _pool: &SqlitePool) -> Alias {
-            Alias {
-                address: self.address,
-                target: self.target,
-                comment: self.comment,
-                created_at: self.created_at,
-                active: self.active,
-            }
-        }
-    }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+#[table(sortable, classes_provider = ClassesPreset, thead_cell_renderer = THeadCellRenderer)]
+pub struct Alias {
+    #[table(class = "w-40")]
+    pub address: String,
+    #[table(class = "w-40")]
+    pub target: String,
+    pub comment: String,
+    #[table(class = "w-1")]
+    pub created_at: String,
+    #[table(class = "w-1")]
+    pub active: bool,
 }
 
 #[derive(Clone, Copy)]
 pub struct ClassesPreset;
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
-#[table(sortable, classes_provider = ClassesPreset, thead_cell_renderer = THeadCellRenderer)]
-pub struct Alias {
-    pub address: String,
-    pub target: String,
-    pub comment: String,
-    pub created_at: String,
-    pub active: bool,
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AliasQuery {
@@ -59,9 +36,7 @@ pub struct AliasQuery {
 
 #[server]
 pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError> {
-    use self::ssr::SqlAlias;
     use crate::database::ssr::pool;
-    use futures::future::join_all;
     let AliasQuery { sort, range, name } = query;
 
     let mut query = QueryBuilder::new("SELECT * FROM aliases");
@@ -82,15 +57,7 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
     query.push_bind(range.start as i64);
 
     let pool = pool()?;
-    Ok(join_all(
-        query
-            .build_query_as::<SqlAlias>()
-            .fetch_all(&pool)
-            .await?
-            .iter()
-            .map(|x: &SqlAlias| x.clone().into_alias(&pool)),
-    )
-    .await)
+    Ok(query.build_query_as::<Alias>().fetch_all(&pool).await?)
 }
 
 #[server]
@@ -217,34 +184,15 @@ where
                 <span class=inner_class>
                     {children()}
                 </span>
-                {move || {
-                    match (sort_priority(), sort_direction()) {
-                        (Some(_prio), ColumnSort::Ascending) => view! {
-                            <svg class="ml-2 h-4 w-4" width="24" height="24" viewBox="0 0 15 15" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M7.14645 2.14645C7.34171 1.95118 7.65829 1.95118 7.85355 2.14645L11.8536 6.14645C12.0488 6.34171 12.0488 6.65829 11.8536 6.85355C11.6583 7.04882 11.3417 7.04882 11.1464 6.85355L8 3.70711L8 12.5C8 12.7761 7.77614 13 7.5 13C7.22386 13 7 12.7761 7 12.5L7 3.70711L3.85355 6.85355C3.65829 7.04882 3.34171 7.04882 3.14645 6.85355C2.95118 6.65829 2.95118 6.34171 3.14645 6.14645L7.14645 2.14645Z"
-                                    fill="currentColor">
-                                </path>
-                            </svg>
-                        },
-                        (Some(_prio), ColumnSort::Descending) => view! {
-                            <svg class="ml-2 h-4 w-4" width="24" height="24" viewBox="0 0 15 15" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M7.5 2C7.77614 2 8 2.22386 8 2.5L8 11.2929L11.1464 8.14645C11.3417 7.95118 11.6583 7.95118 11.8536 8.14645C12.0488 8.34171 12.0488 8.65829 11.8536 8.85355L7.85355 12.8536C7.75979 12.9473 7.63261 13 7.5 13C7.36739 13 7.24021 12.9473 7.14645 12.8536L3.14645 8.85355C2.95118 8.65829 2.95118 8.34171 3.14645 8.14645C3.34171 7.95118 3.65829 7.95118 3.85355 8.14645L7 11.2929L7 2.5C7 2.22386 7.22386 2 7.5 2Z"
-                                    fill="currentColor">
-                                </path>
-                            </svg>
-                        },
-                        _ => view! {
-                            <svg class="ml-2 h-4 w-4 text-grey-500" width="24" height="24" viewBox="0 0 15 15" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.35753 11.9939 7.64245 11.9939 7.81819 11.8182L10.0682 9.56819Z"
-                                    fill="currentColor">
-                                </path>
-                            </svg>
-                        },
-                    }
-                }}
+                <span class="ml-2">
+                    {move || {
+                        match (sort_priority(), sort_direction()) {
+                            (_, ColumnSort::Ascending) => view! { "↑" },
+                            (_, ColumnSort::Descending) => view! { "↓" },
+                            _ => view! { "" },
+                        }
+                    }}
+                </span>
             </button>
         </th>
     }
