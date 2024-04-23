@@ -178,7 +178,7 @@ pub fn HomePage() -> impl IntoView {
                     <div class="flex items-center justify-between">
                         <div class="flex flex-1 items-center space-x-2">
                             <input
-                                class="flex rounded-md border border-input bg-transparent px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-8 w-[250px] lg:w-[350px]"
+                                class="flex rounded-md border border-input bg-transparent px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-8 w-[250px] lg:w-[350px]"
                                 type="search"
                                 placeholder="Search"
                                 value=rows.search

@@ -1,10 +1,9 @@
-use leptos::logging::log;
 use leptos::*;
 use leptos_struct_table::*;
 use leptos_struct_table::{ColumnSort, TableClassesProvider};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
-use sqlx::{QueryBuilder, Row};
+use sqlx::{types::chrono, QueryBuilder, Row};
 use std::collections::VecDeque;
 use std::ops::Range;
 
@@ -18,9 +17,39 @@ pub struct Alias {
     pub target: String,
     pub comment: String,
     #[table(class = "w-1")]
-    pub created_at: String,
+    pub n_recv: i64,
+    #[table(class = "w-1")]
+    pub n_sent: i64,
+    #[table(class = "w-1", renderer = "TimediffRenderer")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
     #[table(class = "w-1")]
     pub active: bool,
+}
+
+#[component]
+fn TimediffRenderer<F>(
+    class: String,
+    #[prop(into)] value: MaybeSignal<chrono::DateTime<chrono::Utc>>,
+    #[allow(dead_code)]
+    on_change: F,
+    #[allow(dead_code)]
+    index: usize,
+) -> impl IntoView
+where
+    F: Fn(chrono::DateTime<chrono::Utc>) + 'static,
+{
+    let time = create_memo(move |_| {
+        let time = value();
+        let dt = time - chrono::Utc::now();
+        let human_time = chrono_humanize::HumanTime::from(dt);
+        human_time.to_string()
+    });
+
+    view! {
+        <td class=class>
+            {time}
+        </td>
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -31,18 +60,20 @@ pub struct AliasQuery {
     #[serde(default)]
     sort: VecDeque<(usize, ColumnSort)>,
     range: Range<usize>,
-    name: String,
+    search: String,
 }
 
 #[server]
 pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError> {
     use crate::database::ssr::pool;
-    let AliasQuery { sort, range, name } = query;
+    let AliasQuery { sort, range, search } = query;
 
     let mut query = QueryBuilder::new("SELECT * FROM aliases");
-    if !name.is_empty() {
+    if !search.is_empty() {
         query.push(" WHERE address LIKE concat('%', ");
-        query.push_bind(&name);
+        query.push_bind(&search);
+        query.push(", '%') OR comment LIKE concat('%', ");
+        query.push_bind(&search);
         query.push(", '%')");
     }
 
@@ -81,7 +112,7 @@ pub struct AliasTableDataProvider {
 impl TableDataProvider<Alias> for AliasTableDataProvider {
     async fn get_rows(&self, range: Range<usize>) -> Result<(Vec<Alias>, Range<usize>), String> {
         list_aliases(AliasQuery {
-            name: self.search.get_untracked().trim().to_string(),
+            search: self.search.get_untracked().trim().to_string(),
             sort: self.sort.clone(),
             range: range.clone(),
         })
@@ -98,7 +129,6 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
     }
 
     fn set_sorting(&mut self, sorting: &VecDeque<(usize, ColumnSort)>) {
-        log!("sorting: {:#?}", sorting);
         self.sort = sorting.clone();
     }
 
@@ -180,11 +210,11 @@ where
         <th class=class
             on:click=move |mouse_event| on_click(TableHeadEvent { index, mouse_event, })
         >
-            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground rounded-md px-3 text-xs -ml-3 h-8">
+            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap px-2 text-xs -ml-2 h-8 text-gray-900 bg-white focus:outline-none hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
                 <span class=inner_class>
                     {children()}
                 </span>
-                <span class="ml-2">
+                <span class="ml-2 w-3">
                     {move || {
                         match (sort_priority(), sort_direction()) {
                             (_, ColumnSort::Ascending) => view! { "↑" },
