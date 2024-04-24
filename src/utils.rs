@@ -63,9 +63,7 @@ where
     F: Fn(TableHeadEvent) + 'static,
 {
     view! {
-        <th class=class
-            on:click=move |mouse_event| on_click(TableHeadEvent { index, mouse_event, })
-        >
+        <th class=class on:click=move |mouse_event| on_click(TableHeadEvent { index, mouse_event, })>
             <button type="button" class="inline-flex items-center justify-center whitespace-nowrap px-2 text-xs -ml-2 h-8 text-gray-900 bg-white focus:outline-none hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
                 <span class=inner_class>
                     {children()}
