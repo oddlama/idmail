@@ -123,7 +123,7 @@ impl TableClassesProvider for TailwindClassesPreset {
     }
 
     fn thead_row(&self, template_classes: &str) -> String {
-        format!("{}", template_classes)
+        template_classes.to_string()
     }
 
     fn thead_cell(&self, _sort: ColumnSort, template_classes: &str) -> String {

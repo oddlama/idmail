@@ -19,14 +19,14 @@ pub async fn add_todo(address: String) -> Result<(), ServerFnError> {
     let comment = "yes very mcuthjgba";
     // TODO: FIXME: AAA
 
-    let r = sqlx::query("INSERT INTO aliases (address, target, comment) VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO aliases (address, target, comment) VALUES (?, ?, ?)")
         .bind(address)
         .bind(target)
         .bind(comment)
         .execute(&pool)
         .await
         .map(|_| ())?;
-    Ok(r)
+    Ok(())
 }
 
 // The struct name and path prefix arguments are optional.
