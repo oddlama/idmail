@@ -159,15 +159,14 @@ pub fn HomePage() -> impl IntoView {
             <input type="submit" value="Add" class="button"/>
         </MultiActionForm>
         <div class="overflow-hidden bg-background">
-            <div class="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
+            <div class="hidden h-full flex-1 flex-col space-y-12 p-12 md:flex">
                 <div class="flex items-center justify-between space-y-2">
                     <div>
-                        <h2 class="text-2xl font-bold tracking-tight">Welcome back!</h2>
-                        <p class="text-muted-foreground">Heres a list of your tasks for this month!</p>
+                        <h2 class="text-4xl font-bold">Aliases</h2>
+                        <p class="text-xl text-muted-foreground">coolmailbox@somemail.com</p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button type="button" tabindex="0" aria-controls="Dzj2NiMMX6" aria-expanded="false"
-                            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full">
+                        <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full">
                             <div class="relative flex shrink-0 overflow-hidden rounded-full h-9 w-9">
                                 <img class="aspect-square h-full w-full" alt="TODO" src="/avatars/01.png" />
                             </div>
@@ -178,35 +177,35 @@ pub fn HomePage() -> impl IntoView {
                     <div class="flex items-center justify-between">
                         <div class="flex flex-1 items-center space-x-2">
                             <input
-                                class="flex rounded-md border border-input bg-transparent px-3 py-1 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-8 w-[250px] lg:w-[350px]"
+                                class="flex rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 h-12 w-[400px] lg:w-[550px] transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 type="search"
                                 placeholder="Search"
                                 value=rows.search
                                 on:input=move |e| { on_input(event_target_value(&e)); }
                             />
 
-                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-xs text-white px-4 h-8 me-2 transition-colors rounded-md focus:ring-2 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300">
-                                <svg class="w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-3 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300">
+                                <svg class="w-6 h-6 me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
                                     <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
                                 New
                             </button>
-                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-xs text-white px-4 h-8 me-2 transition-colors rounded-md focus:ring-2 bg-green-700 hover:bg-green-800 focus:ring-green-300">
-                                <svg class="w-4 h-4 me-2" viewBox="-2.5 5 22 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-3 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300">
+                                <svg class="w-6 h-6 me-2" viewBox="-2.5 5 22 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M14.92 17.56c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-0.6 0-1.080-0.32-1.6-0.96-0.28-0.36-0.8-0.44-1.2-0.16-0.36 0.28-0.44 0.8-0.16 1.2 0.84 1.12 1.8 1.64 2.92 1.64h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.16-2.24zM10.72 12.48h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.2-2.2c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-2.48 0-3.64 2.56-4.68 4.84-0.88 2-1.76 3.84-3.12 3.84h-2.080c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.88 0.84 0.88h2.080c2.48 0 3.64-2.56 4.68-4.84 0.88-2 1.72-3.88 3.12-3.88zM0.84 12.48h2.080c0.6 0 1.080 0.28 1.56 0.92 0.16 0.2 0.4 0.32 0.68 0.32 0.2 0 0.36-0.040 0.52-0.16 0.36-0.28 0.44-0.8 0.16-1.2-0.84-1.040-1.8-1.6-2.92-1.6h-2.080c-0.48 0.040-0.84 0.4-0.84 0.88s0.36 0.84 0.84 0.84z" />
                                 </svg>
                                 New Random
                             </button>
                         </div>
-                        <div class="items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md px-3 text-xs ml-auto hidden h-8 lg:flex">
+                        <div class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg border-[1.5px] border-input px-4 h-12 rounded-lg">
                             {count} " results"
                         </div>
                     </div>
 
-                    <div class="rounded-md border flex flex-col overflow-hidden">
+                    <div class="rounded-lg border-[1.5px] text-lg flex flex-col overflow-hidden">
                         <div class="overflow-auto grow min-h-0">
-                            <table class="table-auto text-sm text-left w-full">
+                            <table class="table-auto text-left w-full">
                                 <TableContent
                                     rows
                                     sorting=sorting
