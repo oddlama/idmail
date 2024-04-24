@@ -147,8 +147,11 @@ pub fn App() -> impl IntoView {
 pub fn HomePage() -> impl IntoView {
     let add_todo = create_server_multi_action::<AddTodo>();
 
-    let rows = AliasTableDataProvider::default();
-    let sorting = create_rw_signal(VecDeque::new());
+    let mut rows = AliasTableDataProvider::default();
+    let default_sorting = VecDeque::from([(5, ColumnSort::Descending)]);
+    rows.set_sorting(&default_sorting);
+    let sorting = create_rw_signal(default_sorting);
+
     let reload_controller = ReloadController::default();
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
