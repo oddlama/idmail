@@ -32,11 +32,7 @@ where
         }
     };
 
-    view! {
-        <td class=class>
-            {time_tooltip}
-        </td>
-    }
+    view! { <td class=class>{time_tooltip}</td> }
 }
 
 #[component]
@@ -53,8 +49,15 @@ where
     view! {
         <td class=class>
             <label class="cursor-pointer">
-                <input type="checkbox" class="sr-only peer" checked=value on:change=move |ev| { on_change(event_target_checked(&ev)); } />
-                <div class="relative w-[3.25rem] h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-7 rtl:peer-checked:after:-translate-x-7 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <input
+                    type="checkbox"
+                    class="sr-only peer"
+                    checked=value
+                    on:change=move |ev| {
+                        on_change(event_target_checked(&ev));
+                    }
+                />
+                <div class="relative w-[3.25rem] h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-7 rtl:peer-checked:after:-translate-x-7 after:content-[''] after:absolute after:top-[3px] after:start-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-blue-600"></div>
             </label>
         </td>
     }
@@ -84,11 +87,18 @@ where
     F: Fn(TableHeadEvent) + 'static,
 {
     view! {
-        <th class=class on:click=move |mouse_event| on_click(TableHeadEvent { index, mouse_event, })>
-            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap px-2 -ml-2 h-12 text-gray-900 bg-white focus:outline-none hover:bg-gray-100 focus-visible:ring-4 focus-visible:ring-ring rounded-lg">
-                <span class=inner_class>
-                    {children()}
-                </span>
+        <th
+            class=class
+            on:click=move |mouse_event| on_click(TableHeadEvent {
+                index,
+                mouse_event,
+            })
+        >
+            <button
+                type="button"
+                class="inline-flex items-center justify-center whitespace-nowrap px-2 -ml-2 h-12 text-gray-900 bg-white focus:outline-none hover:bg-gray-100 focus-visible:ring-4 focus-visible:ring-ring rounded-lg"
+            >
+                <span class=inner_class>{children()}</span>
                 <span class="ml-2 w-3">
                     {move || {
                         match (sort_priority(), sort_direction()) {
@@ -97,6 +107,7 @@ where
                             _ => view! { "" },
                         }
                     }}
+
                 </span>
             </button>
         </th>

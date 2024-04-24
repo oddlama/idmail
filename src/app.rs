@@ -71,13 +71,18 @@ pub fn App() -> impl IntoView {
                                 Err(e) => {
                                     view! {
                                         <div>
-                                            <A href="/signup" class="text-blue-400">"Signup"</A>
+                                            <A href="/signup" class="text-blue-400">
+                                                "Signup"
+                                            </A>
                                             <span class="text-gray-300">", "</span>
-                                            <A href="/login" class="text-blue-400">"Login"</A>
+                                            <A href="/login" class="text-blue-400">
+                                                "Login"
+                                            </A>
                                             <span class="text-gray-300">", "</span>
                                             <span>{format!("Login error: {}", e)}</span>
                                         </div>
-                                    }.into_view()
+                                    }
+                                        .into_view()
                                 }
                                 Ok(None) => {
                                     view! {
@@ -92,7 +97,8 @@ pub fn App() -> impl IntoView {
                                             <span class="text-gray-300">", "</span>
                                             <span>"Logged out."</span>
                                         </div>
-                                    }.into_view()
+                                    }
+                                        .into_view()
                                 }
                                 Ok(Some(user)) => {
                                     view! {
@@ -101,11 +107,10 @@ pub fn App() -> impl IntoView {
                                                 "Settings"
                                             </A>
                                             <span class="text-gray-300">", "</span>
-                                            <span>
-                                                {format!("Logged in as: {}", user.username)}
-                                            </span>
+                                            <span>{format!("Logged in as: {}", user.username)}</span>
                                         </div>
-                                    }.into_view()
+                                    }
+                                        .into_view()
                                 }
                             })
                     }}
@@ -130,6 +135,7 @@ pub fn App() -> impl IntoView {
                             }
                         }
                     />
+
                 </Routes>
             </main>
         </Router>
@@ -153,9 +159,7 @@ pub fn HomePage() -> impl IntoView {
 
     view! {
         <MultiActionForm action=add_todo class="mb-4">
-            <label class="block mb-2">
-                "Add a Todo" <input type="text" name="address" class="form-input"/>
-            </label>
+            <label class="block mb-2">"Add a Todo" <input type="text" name="address" class="form-input"/></label>
             <input type="submit" value="Add" class="button"/>
         </MultiActionForm>
         <div class="overflow-hidden bg-background">
@@ -166,9 +170,12 @@ pub fn HomePage() -> impl IntoView {
                         <p class="text-xl text-muted-foreground">coolmailbox@somemail.com</p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full">
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full"
+                        >
                             <div class="relative flex shrink-0 overflow-hidden rounded-full h-9 w-9">
-                                <img class="aspect-square h-full w-full" alt="TODO" src="/avatars/01.png" />
+                                <img class="aspect-square h-full w-full" alt="TODO" src="/avatars/01.png"/>
                             </div>
                         </button>
                     </div>
@@ -180,18 +187,40 @@ pub fn HomePage() -> impl IntoView {
                             type="search"
                             placeholder="Search"
                             value=rows.search
-                            on:input=move |e| { on_input(event_target_value(&e)); }
+                            on:input=move |e| {
+                                on_input(event_target_value(&e));
+                            }
                         />
-                        <button type="button" class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300">
-                            <svg class="w-6 h-6 me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
+                        <button
+                            type="button"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300"
+                        >
+                            <svg
+                                class="w-6 h-6 me-2"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
                             New
                         </button>
-                        <button type="button" class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300">
-                            <svg class="w-6 h-6 me-2" viewBox="-2.5 5 22 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M14.92 17.56c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-0.6 0-1.080-0.32-1.6-0.96-0.28-0.36-0.8-0.44-1.2-0.16-0.36 0.28-0.44 0.8-0.16 1.2 0.84 1.12 1.8 1.64 2.92 1.64h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.16-2.24zM10.72 12.48h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.2-2.2c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-2.48 0-3.64 2.56-4.68 4.84-0.88 2-1.76 3.84-3.12 3.84h-2.080c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.88 0.84 0.88h2.080c2.48 0 3.64-2.56 4.68-4.84 0.88-2 1.72-3.88 3.12-3.88zM0.84 12.48h2.080c0.6 0 1.080 0.28 1.56 0.92 0.16 0.2 0.4 0.32 0.68 0.32 0.2 0 0.36-0.040 0.52-0.16 0.36-0.28 0.44-0.8 0.16-1.2-0.84-1.040-1.8-1.6-2.92-1.6h-2.080c-0.48 0.040-0.84 0.4-0.84 0.88s0.36 0.84 0.84 0.84z" />
+                        <button
+                            type="button"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300"
+                        >
+                            <svg
+                                class="w-6 h-6 me-2"
+                                viewBox="-2.5 5 22 22"
+                                fill="currentColor"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path d="M14.92 17.56c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-0.6 0-1.080-0.32-1.6-0.96-0.28-0.36-0.8-0.44-1.2-0.16-0.36 0.28-0.44 0.8-0.16 1.2 0.84 1.12 1.8 1.64 2.92 1.64h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.16-2.24zM10.72 12.48h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.2-2.2c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-2.48 0-3.64 2.56-4.68 4.84-0.88 2-1.76 3.84-3.12 3.84h-2.080c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.88 0.84 0.88h2.080c2.48 0 3.64-2.56 4.68-4.84 0.88-2 1.72-3.88 3.12-3.88zM0.84 12.48h2.080c0.6 0 1.080 0.28 1.56 0.92 0.16 0.2 0.4 0.32 0.68 0.32 0.2 0 0.36-0.040 0.52-0.16 0.36-0.28 0.44-0.8 0.16-1.2-0.84-1.040-1.8-1.6-2.92-1.6h-2.080c-0.48 0.040-0.84 0.4-0.84 0.88s0.36 0.84 0.84 0.84z"></path>
                             </svg>
                             New Random
                         </button>
@@ -238,12 +267,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
             </label>
             <label class="block mb-4">
                 <span class="text-gray-700">"Password:"</span>
-                <input
-                    type="password"
-                    placeholder="Password"
-                    name="password"
-                    class="auth-input mt-1 block w-full"
-                />
+                <input type="password" placeholder="Password" name="password" class="auth-input mt-1 block w-full"/>
             </label>
             <label class="inline-flex items-center mb-4">
                 <input type="checkbox" name="remember" class="auth-input mr-2"/>
@@ -262,34 +286,19 @@ pub fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoVie
         <ActionForm action=action>
             <h1>"Sign Up"</h1>
             <label>
-                "User ID:"
-                <input
-                    type="text"
-                    placeholder="User ID"
-                    maxlength="32"
-                    name="username"
-                    class="auth-input"
-                />
+                "User ID:" <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input"/>
             </label>
             <br/>
             <label>
-                "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input"/>
+                "Password:" <input type="password" placeholder="Password" name="password" class="auth-input"/>
             </label>
             <br/>
             <label>
                 "Confirm Password:"
-                <input
-                    type="password"
-                    placeholder="Password again"
-                    name="password_confirmation"
-                    class="auth-input"
-                />
+                <input type="password" placeholder="Password again" name="password_confirmation" class="auth-input"/>
             </label>
             <br/>
-            <label>
-                "Remember me?" <input type="checkbox" name="remember" class="auth-input"/>
-            </label>
+            <label>"Remember me?" <input type="checkbox" name="remember" class="auth-input"/></label>
 
             <br/>
             <button type="submit" class="button">
