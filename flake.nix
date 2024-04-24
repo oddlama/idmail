@@ -232,7 +232,7 @@
           commonArgs.buildInputs
           ++ [
             (mkBinOnlyWrapper rustToolchain)
-            # FIXME: pkgs.rust-analyzer
+            pkgs.leptosfmt
           ];
 
         env = [
