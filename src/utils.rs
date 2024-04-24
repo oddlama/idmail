@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local, Utc};
-use leptos::*;
+use leptos::{html::Dialog, *};
 use leptos_struct_table::*;
 
 #[component]
@@ -57,6 +57,7 @@ where
                         on_change(event_target_checked(&ev));
                     }
                 />
+
                 <div class="relative w-[3.25rem] h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-7 rtl:peer-checked:after:-translate-x-7 after:content-[''] after:absolute after:top-[3px] after:start-[3px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-blue-600"></div>
             </label>
         </td>
@@ -94,6 +95,7 @@ where
                 mouse_event,
             })
         >
+
             <button
                 type="button"
                 class="inline-flex items-center justify-center whitespace-nowrap px-2 -ml-2 h-12 text-gray-900 bg-white focus:outline-none hover:bg-gray-100 focus-visible:ring-4 focus-visible:ring-ring rounded-lg"
@@ -127,7 +129,10 @@ impl TableClassesProvider for TailwindClassesPreset {
     }
 
     fn thead_cell(&self, _sort: ColumnSort, template_classes: &str) -> String {
-        format!("h-14 px-4 text-left text-base align-middle font-medium {}", template_classes)
+        format!(
+            "h-14 px-4 text-left text-base align-middle font-medium {}",
+            template_classes
+        )
     }
 
     fn thead_cell_inner(&self) -> String {
@@ -157,5 +162,34 @@ impl TableClassesProvider for TailwindClassesPreset {
 
     fn cell(&self, template_classes: &str) -> String {
         format!("p-4 whitespace-nowrap text-ellipsis {}", template_classes)
+    }
+}
+
+#[component]
+pub fn Modal(
+    #[prop(into)] open: Signal<bool>,
+    children: Children,
+    dialog_el: NodeRef<Dialog>,
+) -> impl IntoView {
+    create_effect(move |_| {
+        if let Some(dialog) = dialog_el.get_untracked() {
+            if open() {
+                if dialog.show_modal().is_err() {
+                    dialog.set_open(true);
+                }
+            } else {
+                dialog.close();
+            }
+        }
+    });
+
+    view! {
+        <dialog
+            ref=dialog_el
+            open=open.get_untracked()
+            class="rounded-lg backdrop:bg-gray-500 backdrop:bg-opacity-75"
+        >
+            <main>{children()}</main>
+        </dialog>
     }
 }

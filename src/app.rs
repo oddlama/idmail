@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
 
 use crate::{
-    aliases::{AliasRowRenderer, AliasTableDataProvider},
+    aliases::{Alias, AliasTableDataProvider},
     auth::{get_user, Login, Logout, Signup},
+    utils::Modal,
 };
-use leptos::*;
+use leptos::{ev::MouseEvent, html::Dialog, *};
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
 use leptos_router::{ActionForm, MultiActionForm, Route, Router, Routes, A};
 use leptos_struct_table::*;
@@ -29,14 +30,15 @@ pub async fn add_todo(address: String) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-// The struct name and path prefix arguments are optional.
 #[server]
-pub async fn delete_todo(id: u16) -> Result<(), ServerFnError> {
-    use crate::database::ssr::pool;
-    let pool = pool()?;
+pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
+    let pool = crate::database::ssr::pool()?;
 
-    Ok(sqlx::query("DELETE FROM aliases WHERE id = $1")
-        .bind(id)
+    use std::{thread, time::Duration};
+    // TODO away
+    thread::sleep(Duration::from_millis(2000));
+    Ok(sqlx::query("DELETE FROM aliases WHERE address = $1")
+        .bind(address)
         .execute(&pool)
         .await
         .map(|_| ())?)
@@ -135,7 +137,6 @@ pub fn App() -> impl IntoView {
                             }
                         }
                     />
-
                 </Routes>
             </main>
         </Router>
@@ -145,7 +146,6 @@ pub fn App() -> impl IntoView {
 #[component]
 pub fn HomePage() -> impl IntoView {
     let add_todo = create_server_multi_action::<AddTodo>();
-    let delete_todo = create_server_action::<DeleteTodo>();
 
     let rows = AliasTableDataProvider::default();
     let sorting = create_rw_signal(VecDeque::new());
@@ -153,9 +153,76 @@ pub fn HomePage() -> impl IntoView {
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
-    //let reload = move |_| {
-    //    reload_controller.reload();
-    //};
+    let pending_alias_address = create_rw_signal(None);
+    let delete_modal_open = create_rw_signal(false);
+    let delete_modal_elem = create_node_ref::<Dialog>();
+    let delete_modal_close = Callback::new(move |()| {
+        delete_modal_elem
+            .get_untracked()
+            .expect("dialog to have been created")
+            .close();
+    });
+
+    #[allow(unused_variables, non_snake_case)]
+    let alias_row_renderer = move |class: Signal<String>,
+                                   row: Alias,
+                                   index: usize,
+                                   selected: Signal<bool>,
+                                   on_select: EventHandler<MouseEvent>,
+                                   on_change: EventHandler<ChangeEvent<Alias>>| {
+        let address = row.address.clone();
+        view! {
+            <tr class=class on:click=move |mouse_event| on_select.run(mouse_event)>
+                {row.render_row(index, on_change)}
+                <td class="w-1 p-4 whitespace-nowrap text-ellipsis">
+                    <div class="inline-flex items-center rounded-md">
+                        <button class="text-gray-800 hover:text-blue-600 bg-white hover:bg-gray-100 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center">
+                            <span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    class="w-6 h-6"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                                    />
+                                </svg>
+                            </span>
+                        </button>
+                        <button
+                            class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
+                            on:click=move |_| {
+                                pending_alias_address.set(Some(address.clone()));
+                                delete_modal_open.set(true);
+                            }
+                        >
+                            <span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    class="w-6 h-6"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                    />
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        }
+    };
 
     view! {
         <MultiActionForm action=add_todo class="mb-4">
@@ -172,7 +239,7 @@ pub fn HomePage() -> impl IntoView {
                     <div class="flex items-center space-x-2">
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full"
+                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground px-4 py-2 relative h-8 w-8 rounded-full"
                         >
                             <div class="relative flex shrink-0 overflow-hidden rounded-full h-9 w-9">
                                 <img class="aspect-square h-full w-full" alt="TODO" src="/avatars/01.png"/>
@@ -183,7 +250,7 @@ pub fn HomePage() -> impl IntoView {
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center justify-between">
                         <input
-                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 me-2 mb-2 h-12 w-full md:w-[360px] lg:w-[520px] transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 me-2 mb-2 h-12 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="search"
                             placeholder="Search"
                             value=rows.search
@@ -191,9 +258,10 @@ pub fn HomePage() -> impl IntoView {
                                 on_input(event_target_value(&e));
                             }
                         />
+
                         <button
                             type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300"
                         >
                             <svg
                                 class="w-6 h-6 me-2"
@@ -212,7 +280,7 @@ pub fn HomePage() -> impl IntoView {
                         </button>
                         <button
                             type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300"
                         >
                             <svg
                                 class="w-6 h-6 me-2"
@@ -236,7 +304,7 @@ pub fn HomePage() -> impl IntoView {
                                 <TableContent
                                     rows
                                     sorting=sorting
-                                    row_renderer=AliasRowRenderer
+                                    row_renderer=alias_row_renderer
                                     reload_controller=reload_controller
                                     loading_row_display_limit=0
                                     on_row_count=set_count
@@ -246,6 +314,62 @@ pub fn HomePage() -> impl IntoView {
                     </div>
                 </div>
             </div>
+            <Modal open=delete_modal_open dialog_el=delete_modal_elem>
+                <div class="relative p-4 sm:pr-6 transform overflow-hidden rounded-lg bg-white text-left transition-all sm:w-full sm:max-w-lg">
+                    <div class="bg-white py-3">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg
+                                    class="h-6 w-6 text-red-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                    ></path>
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                                <h3 class="text-xl font-semibold leading-6 text-gray-900" id="modal-title">
+                                    "Delete " {pending_alias_address}
+                                </h3>
+                                <div class="mt-2">
+                                    <p class="text-lg text-gray-500">
+                                        "Are you sure you want to delete this alias? This action cannot be undone."
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
+                        <button
+                            type="button"
+                            class="inline-flex w-full justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
+                            on:click=move |_ev| { delete_modal_close(()); }
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex w-full justify-center rounded-lg transition-all bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-500 focus:ring-4 focus:ring-red-300 sm:w-auto"
+                            on:click=move |_ev| {
+                                let addr = pending_alias_address.get().expect("no pending alias");
+                                spawn_local(async {
+                                    delete_alias(addr).await.expect("Error in delete");
+                                });
+                                delete_modal_close(());
+                                reload_controller.reload();
+                            }
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     }
 }
