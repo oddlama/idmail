@@ -159,7 +159,7 @@ pub fn HomePage() -> impl IntoView {
             <input type="submit" value="Add" class="button"/>
         </MultiActionForm>
         <div class="overflow-hidden bg-background">
-            <div class="hidden h-full flex-1 flex-col space-y-12 p-12 md:flex">
+            <div class="h-full flex-1 flex-col space-y-12 p-4 md:p-12">
                 <div class="flex items-center justify-between space-y-2">
                     <div>
                         <h2 class="text-4xl font-bold">Aliases</h2>
@@ -174,31 +174,29 @@ pub fn HomePage() -> impl IntoView {
                     </div>
                 </div>
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex flex-1 items-center space-x-2">
-                            <input
-                                class="flex rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 h-12 w-[400px] lg:w-[550px] transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                type="search"
-                                placeholder="Search"
-                                value=rows.search
-                                on:input=move |e| { on_input(event_target_value(&e)); }
-                            />
-
-                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-3 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300">
-                                <svg class="w-6 h-6 me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                </svg>
-                                New
-                            </button>
-                            <button type="button" class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-3 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300">
-                                <svg class="w-6 h-6 me-2" viewBox="-2.5 5 22 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M14.92 17.56c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-0.6 0-1.080-0.32-1.6-0.96-0.28-0.36-0.8-0.44-1.2-0.16-0.36 0.28-0.44 0.8-0.16 1.2 0.84 1.12 1.8 1.64 2.92 1.64h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.16-2.24zM10.72 12.48h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.2-2.2c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-2.48 0-3.64 2.56-4.68 4.84-0.88 2-1.76 3.84-3.12 3.84h-2.080c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.88 0.84 0.88h2.080c2.48 0 3.64-2.56 4.68-4.84 0.88-2 1.72-3.88 3.12-3.88zM0.84 12.48h2.080c0.6 0 1.080 0.28 1.56 0.92 0.16 0.2 0.4 0.32 0.68 0.32 0.2 0 0.36-0.040 0.52-0.16 0.36-0.28 0.44-0.8 0.16-1.2-0.84-1.040-1.8-1.6-2.92-1.6h-2.080c-0.48 0.040-0.84 0.4-0.84 0.88s0.36 0.84 0.84 0.84z" />
-                                </svg>
-                                New Random
-                            </button>
-                        </div>
-                        <div class="inline-flex items-center justify-center whitespace-nowrap font-medium text-lg border-[1.5px] border-input px-4 h-12 rounded-lg">
+                    <div class="flex flex-wrap items-center justify-between">
+                        <input
+                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 me-2 mb-2 h-12 w-full md:w-[360px] lg:w-[520px] transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            type="search"
+                            placeholder="Search"
+                            value=rows.search
+                            on:input=move |e| { on_input(event_target_value(&e)); }
+                        />
+                        <button type="button" class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-blue-700 hover:bg-blue-800 focus:ring-blue-300">
+                            <svg class="w-6 h-6 me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            New
+                        </button>
+                        <button type="button" class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-colors rounded-lg focus:ring-4 bg-green-700 hover:bg-green-800 focus:ring-green-300">
+                            <svg class="w-6 h-6 me-2" viewBox="-2.5 5 22 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14.92 17.56c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-0.6 0-1.080-0.32-1.6-0.96-0.28-0.36-0.8-0.44-1.2-0.16-0.36 0.28-0.44 0.8-0.16 1.2 0.84 1.12 1.8 1.64 2.92 1.64h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.16-2.24zM10.72 12.48h3.76l-0.76 0.76c-0.32 0.32-0.32 0.88 0 1.2 0.16 0.16 0.4 0.24 0.6 0.24s0.44-0.080 0.6-0.24l2.2-2.2c0.32-0.32 0.32-0.88 0-1.2l-2.2-2.2c-0.32-0.32-0.88-0.32-1.2 0s-0.32 0.88 0 1.2l0.76 0.76h-3.76c-2.48 0-3.64 2.56-4.68 4.84-0.88 2-1.76 3.84-3.12 3.84h-2.080c-0.48 0-0.84 0.36-0.84 0.84s0.36 0.88 0.84 0.88h2.080c2.48 0 3.64-2.56 4.68-4.84 0.88-2 1.72-3.88 3.12-3.88zM0.84 12.48h2.080c0.6 0 1.080 0.28 1.56 0.92 0.16 0.2 0.4 0.32 0.68 0.32 0.2 0 0.36-0.040 0.52-0.16 0.36-0.28 0.44-0.8 0.16-1.2-0.84-1.040-1.8-1.6-2.92-1.6h-2.080c-0.48 0.040-0.84 0.4-0.84 0.88s0.36 0.84 0.84 0.84z" />
+                            </svg>
+                            New Random
+                        </button>
+                        <div class="flex flex-1"></div>
+                        <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-right px-4 h-12">
                             {count} " results"
                         </div>
                     </div>
