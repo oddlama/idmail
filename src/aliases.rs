@@ -1,3 +1,4 @@
+use ::chrono::{DateTime, Local, Utc};
 use leptos::*;
 use leptos_struct_table::*;
 use leptos_struct_table::{ColumnSort, TableClassesProvider};
@@ -21,7 +22,7 @@ pub struct Alias {
     #[table(class = "w-1")]
     pub n_sent: i64,
     #[table(class = "w-1", renderer = "TimediffRenderer")]
-    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: DateTime<Utc>,
     #[table(class = "w-1")]
     pub active: bool,
 }
@@ -29,25 +30,35 @@ pub struct Alias {
 #[component]
 fn TimediffRenderer<F>(
     class: String,
-    #[prop(into)] value: MaybeSignal<chrono::DateTime<chrono::Utc>>,
-    #[allow(dead_code)]
-    on_change: F,
-    #[allow(dead_code)]
-    index: usize,
+    #[prop(into)] value: MaybeSignal<DateTime<Utc>>,
+    #[allow(unused)] on_change: F,
+    #[allow(unused)] index: usize,
 ) -> impl IntoView
 where
-    F: Fn(chrono::DateTime<chrono::Utc>) + 'static,
+    F: Fn(DateTime<Utc>) + 'static,
 {
-    let time = create_memo(move |_| {
-        let time = value();
-        let dt = time - chrono::Utc::now();
+    let time_tooltip = move || {
+        let utc_time = value();
+        let dt = utc_time - Utc::now();
         let human_time = chrono_humanize::HumanTime::from(dt);
-        human_time.to_string()
-    });
+
+        let local_time: DateTime<Local> = DateTime::from(utc_time);
+        let approximate_time = human_time.to_string();
+        let precise_time = local_time.format("%c").to_string();
+
+        view! {
+            <div class="group relative w-max">
+                <span class="pointer-events-none absolute -top-7 -left-8 w-max rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-gray-50 opacity-0 shadow transition-opacity group-hover:opacity-100 z-50">
+                    {precise_time}
+                </span>
+                {approximate_time}
+            </div>
+        }
+    };
 
     view! {
         <td class=class>
-            {time}
+            {time_tooltip}
         </td>
     }
 }
@@ -178,7 +189,7 @@ impl TableClassesProvider for ClassesPreset {
     fn cell(&self, template_classes: &str) -> String {
         format!(
             "{} {}",
-            "p-2 whitespace-nowrap overflow-hidden text-ellipsis", template_classes
+            "p-2 whitespace-nowrap text-ellipsis", template_classes
         )
     }
 }
