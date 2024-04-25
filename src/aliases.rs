@@ -22,7 +22,7 @@ pub struct Alias {
     pub n_recv: i64,
     #[table(class = "w-1", title = "Sent")]
     pub n_sent: i64,
-    #[table(class = "w-1", renderer = "TimediffRenderer")]
+    #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
@@ -72,6 +72,22 @@ pub async fn alias_count() -> Result<usize, ServerFnError> {
         .get(0);
 
     Ok(count as usize)
+}
+
+#[server]
+pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
+    let pool = crate::database::ssr::pool()?;
+
+    use std::{thread, time::Duration};
+    // TODO away
+    thread::sleep(Duration::from_millis(2000));
+
+    sqlx::query("DELETE FROM aliases WHERE address = $1")
+        .bind(address)
+        .execute(&pool)
+        .await
+        .map(|_| ())?;
+    Ok(())
 }
 
 #[derive(Default)]

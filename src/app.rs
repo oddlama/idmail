@@ -1,11 +1,11 @@
 use std::collections::VecDeque;
 
 use crate::{
-    aliases::{Alias, AliasTableDataProvider},
+    aliases::{delete_alias, Alias, AliasTableDataProvider},
     auth::{get_user, Login, Logout, Signup},
     utils::Modal,
 };
-use leptos::{ev::MouseEvent, html::Dialog, *};
+use leptos::{ev::MouseEvent, html::Dialog, logging::error, *};
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
 use leptos_router::{ActionForm, MultiActionForm, Route, Router, Routes, A};
 use leptos_struct_table::*;
@@ -27,21 +27,8 @@ pub async fn add_todo(address: String) -> Result<(), ServerFnError> {
         .execute(&pool)
         .await
         .map(|_| ())?;
+
     Ok(())
-}
-
-#[server]
-pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
-    let pool = crate::database::ssr::pool()?;
-
-    use std::{thread, time::Duration};
-    // TODO away
-    thread::sleep(Duration::from_millis(2000));
-    Ok(sqlx::query("DELETE FROM aliases WHERE address = $1")
-        .bind(address)
-        .execute(&pool)
-        .await
-        .map(|_| ())?)
 }
 
 #[component]
@@ -158,6 +145,7 @@ pub fn HomePage() -> impl IntoView {
 
     let pending_alias_address = create_rw_signal(None);
     let delete_modal_open = create_rw_signal(false);
+    let (delete_modal_spinning, set_delete_modal_spinning) = create_signal(false);
     let delete_modal_elem = create_node_ref::<Dialog>();
     let delete_modal_close = Callback::new(move |()| {
         delete_modal_elem
@@ -201,6 +189,7 @@ pub fn HomePage() -> impl IntoView {
                             class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| {
                                 pending_alias_address.set(Some(address.clone()));
+                                set_delete_modal_spinning(false);
                                 delete_modal_open.set(true);
                             }
                         >
@@ -358,16 +347,33 @@ pub fn HomePage() -> impl IntoView {
                         </button>
                         <button
                             type="button"
-                            class="inline-flex w-full justify-center rounded-lg transition-all bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-500 focus:ring-4 focus:ring-red-300 sm:w-auto"
+                            disabled=delete_modal_spinning
+                            class="inline-flex w-full justify-center items-center rounded-lg transition-all px-3 py-2 bg-red-600 hover:bg-red-500 font-semibold text-white focus:ring-4 focus:ring-red-300 sm:w-auto"
+                            class=("!bg-red-500", delete_modal_spinning)
                             on:click=move |_ev| {
-                                let addr = pending_alias_address.get().expect("no pending alias");
-                                spawn_local(async {
-                                    delete_alias(addr).await.expect("Error in delete");
-                                });
-                                delete_modal_close(());
-                                reload_controller.reload();
+                                if !delete_modal_spinning() {
+                                    let addr = pending_alias_address.get().expect("no pending alias");
+                                    let delete_modal_close = delete_modal_close.clone();
+                                    set_delete_modal_spinning(true);
+                                    spawn_local(async move {
+                                        if let Err(e) = delete_alias(addr).await {
+                                            // TODO: use toast once ssr available
+                                            error!("Failed to delete: {}", e);
+                                        } else {
+                                            reload_controller.reload();
+                                        }
+                                        delete_modal_close(());
+                                    });
+                                    //delete_modal_close(());
+                                }
                             }
                         >
+                            <Show when=delete_modal_spinning>
+                                <svg aria-hidden="true" role="status" class="inline w-4 h-4 me-2 text-red-900 animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                                    <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="#ffffff"/>
+                                </svg>
+                            </Show>
                             Delete
                         </button>
                     </div>
