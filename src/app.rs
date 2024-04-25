@@ -105,9 +105,7 @@ pub fn App() -> impl IntoView {
 
 #[component]
 pub fn Main() -> impl IntoView {
-    view! {
-        <Aliases />
-    }
+    view! { <Aliases/> }
 }
 
 #[component]

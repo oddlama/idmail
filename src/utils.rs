@@ -150,7 +150,7 @@ impl TableClassesProvider for TailwindClassesPreset {
     }
 
     fn loading_cell(&self, _row_index: usize, _col_index: usize, prop_class: &str) -> String {
-        format!("p-4 {}", prop_class)
+        format!("px-4 py-2 {}", prop_class)
     }
 
     fn loading_cell_inner(&self, _row_index: usize, _col_index: usize, prop_class: &str) -> String {
@@ -161,7 +161,7 @@ impl TableClassesProvider for TailwindClassesPreset {
     }
 
     fn cell(&self, template_classes: &str) -> String {
-        format!("p-4 whitespace-nowrap text-ellipsis {}", template_classes)
+        format!("px-4 py-2 whitespace-nowrap text-ellipsis {}", template_classes)
     }
 }
 
