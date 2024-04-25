@@ -184,11 +184,7 @@ pub fn Modal(
     });
 
     view! {
-        <dialog
-            ref=dialog_el
-            open=open.get_untracked()
-            class="rounded-lg backdrop:bg-gray-500 backdrop:bg-opacity-75"
-        >
+        <dialog ref=dialog_el open=open.get_untracked() class="rounded-lg backdrop:bg-gray-500 backdrop:bg-opacity-75">
             <main>{children()}</main>
         </dialog>
     }
