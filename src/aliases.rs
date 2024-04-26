@@ -6,7 +6,6 @@ use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, Tim
 
 use chrono::{DateTime, Utc};
 use leptos::{ev::MouseEvent, html::Dialog, logging::error, *};
-use leptos_router::MultiActionForm;
 use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
 use serde::{Deserialize, Serialize};
@@ -188,18 +187,15 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
 }
 
 #[server]
-pub async fn add_todo(address: String) -> Result<(), ServerFnError> {
-    use crate::database::ssr::pool;
+pub async fn update_alias_active(address: String, active: bool) -> Result<(), ServerFnError> {
     let user = crate::auth::get_user().await?;
-    let pool = pool()?;
-    let target = "target@example.com";
-    let comment = "yes very mcuthjgba";
+    let pool = crate::database::ssr::pool()?;
     // TODO: FIXME: AAA
+    // TODO: FIXME: AAA auth
 
-    sqlx::query("INSERT INTO aliases (address, target, comment) VALUES (?, ?, ?)")
+    sqlx::query("UPDATE aliases SET active = ? WHERE address = ?")
+        .bind(active)
         .bind(address)
-        .bind(target)
-        .bind(comment)
         .execute(&pool)
         .await
         .map(|_| ())?;
@@ -207,10 +203,43 @@ pub async fn add_todo(address: String) -> Result<(), ServerFnError> {
     Ok(())
 }
 
+#[server]
+pub async fn create_or_update_alias(
+    old_address: Option<String>,
+    alias: String,
+    domain: String,
+    target: String,
+    comment: String,
+) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user().await?;
+    let pool = crate::database::ssr::pool()?;
+    // TODO: FIXME: AAA auth
+
+    let address = format!("{alias}@{domain}");
+    if let Some(old_address) = old_address {
+        sqlx::query("UPDATE aliases SET address = ?, target = ?, comment = ? WHERE address = ?")
+            .bind(address)
+            .bind(target)
+            .bind(comment)
+            .bind(old_address)
+            .execute(&pool)
+            .await
+            .map(|_| ())?;
+    } else {
+        sqlx::query("INSERT INTO aliases (address, target, comment) VALUES (?, ?, ?)")
+            .bind(address)
+            .bind(target)
+            .bind(comment)
+            .execute(&pool)
+            .await
+            .map(|_| ())?;
+    }
+
+    Ok(())
+}
+
 #[component]
 pub fn Aliases() -> impl IntoView {
-    let add_todo = create_server_multi_action::<AddTodo>();
-
     let mut rows = AliasTableDataProvider::default();
     let default_sorting = VecDeque::from([(5, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
@@ -247,6 +276,7 @@ pub fn Aliases() -> impl IntoView {
 
     let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
     let (edit_modal_input_alias, set_edit_modal_input_alias) = create_signal("".to_string());
+    let (edit_modal_input_target, set_edit_modal_input_target) = create_signal("".to_string());
     let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
         set_edit_modal_alias(edit_alias.clone());
@@ -264,6 +294,7 @@ pub fn Aliases() -> impl IntoView {
             } else {
                 set_edit_modal_input_domain(domain);
             }
+            set_edit_modal_input_target(edit_alias.target.clone());
             set_edit_modal_input_comment(edit_alias.comment.clone());
         } else {
             // Only set the input domain if the current one is not in the list
@@ -274,6 +305,8 @@ pub fn Aliases() -> impl IntoView {
             if !allowed_domains.contains(&edit_modal_input_domain()) {
                 set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
             }
+            // TODO set from user
+            //set_edit_modal_input_target("".to_string());
             set_edit_modal_input_comment("".to_string());
         }
         set_edit_modal_waiting(false);
@@ -349,10 +382,6 @@ pub fn Aliases() -> impl IntoView {
     };
 
     view! {
-        <MultiActionForm action=add_todo class="mb-4">
-            <label class="block mb-2">"Add a Todo" <input type="text" name="address" class="form-input"/></label>
-            <input type="submit" value="Add" class="button"/>
-        </MultiActionForm>
         <div class="overflow-hidden bg-background">
             <div class="h-full flex-1 flex-col space-y-12 p-4 md:p-12">
                 <div class="flex items-center justify-between space-y-2">
@@ -577,8 +606,9 @@ pub fn Aliases() -> impl IntoView {
                         <input
                             class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="email"
-                            placeholder="target@example.com"
-                            // TODO
+                            placeholder="target@example.com" // TODO value from user
+                            on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
+                            prop:value=edit_modal_input_target
                             disabled
                         />
                     </div>
@@ -612,10 +642,15 @@ pub fn Aliases() -> impl IntoView {
                             class=("!bg-blue-500", edit_modal_waiting)
                             on:click=move |_ev| {
                                 if !edit_modal_waiting() {
-                                    let alias = edit_modal_alias().expect("no alias to edit");
+                                    let alias = edit_modal_alias();
                                     let edit_modal_close = edit_modal_close.clone();
                                     set_edit_modal_waiting(true);
                                     spawn_local(async move {
+                                        if let Err(e) = create_or_update_alias(alias.map(|x| x.address), edit_modal_input_alias(), edit_modal_input_domain(), edit_modal_input_target(), edit_modal_input_comment()).await {
+                                            error!("Failed to create/update: {}", e);
+                                        } else {
+                                            reload_controller.reload();
+                                        }
                                         edit_modal_close(());
                                     });
                                 }
