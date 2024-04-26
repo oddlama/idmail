@@ -166,11 +166,7 @@ impl TableClassesProvider for TailwindClassesPreset {
 }
 
 #[component]
-pub fn Modal(
-    #[prop(into)] open: Signal<bool>,
-    children: Children,
-    dialog_el: NodeRef<Dialog>,
-) -> impl IntoView {
+pub fn Modal(#[prop(into)] open: Signal<bool>, children: Children, dialog_el: NodeRef<Dialog>) -> impl IntoView {
     create_effect(move |_| {
         if let Some(dialog) = dialog_el.get_untracked() {
             if open() {
@@ -187,5 +183,51 @@ pub fn Modal(
         <dialog ref=dialog_el open=open.get_untracked() class="rounded-lg backdrop:bg-gray-500 backdrop:bg-opacity-75">
             <main>{children()}</main>
         </dialog>
+    }
+}
+
+#[component]
+pub fn Select(
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] option_class: MaybeSignal<String>,
+    choices: ReadSignal<Vec<String>>,
+    value: ReadSignal<String>,
+    set_value: WriteSignal<String>,
+) -> impl IntoView {
+    let option_class = Signal::derive(move || option_class.get());
+    view! {
+        <select
+            class=class
+            on:change=move |ev| {
+                let new_value = event_target_value(&ev);
+                set_value(new_value);
+            }
+        >
+            <For
+                each=choices
+                key=|x| x.clone()
+                let:child
+            >
+                <SelectOption value class=option_class id=child.clone() />
+            </For>
+        </select>
+    }
+}
+
+#[component]
+pub fn SelectOption(
+    #[prop(into, optional)] class: MaybeSignal<String>,
+    id: String,
+    value: ReadSignal<String>,
+) -> impl IntoView {
+    let id_copy = id.clone();
+    view! {
+        <option
+            class=class
+            value=id.clone()
+            selected=move || value() == id_copy
+        >
+            {id}
+        </option>
     }
 }

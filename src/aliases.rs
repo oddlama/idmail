@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::utils::Modal;
+use crate::utils::{Modal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
@@ -157,6 +157,11 @@ pub fn Aliases() -> impl IntoView {
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
+    let (allowed_domains, set_allowed_domains) = create_signal(vec![
+        "example.com".to_string(),
+        "test.local".to_string(),
+    ]);
+
     let (delete_modal_alias, set_delete_modal_alias) = create_signal(None);
     let (delete_modal_open, set_delete_modal_open) = create_signal(false);
     let (delete_modal_waiting, set_delete_modal_waiting) = create_signal(false);
@@ -179,6 +184,8 @@ pub fn Aliases() -> impl IntoView {
             .close();
     });
 
+    let (edit_modal_domain, set_edit_modal_domain) = create_signal("example.com".to_string());
+
     #[allow(unused_variables, non_snake_case)]
     let alias_row_renderer = move |class: Signal<String>,
                                    row: Alias,
@@ -197,6 +204,7 @@ pub fn Aliases() -> impl IntoView {
                             class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| {
                                 set_edit_modal_alias(Some(edit_alias.clone()));
+                                // TODO set_edit_modal_domain();
                                 set_edit_modal_waiting(false);
                                 set_edit_modal_open(true);
                             }
@@ -277,7 +285,7 @@ pub fn Aliases() -> impl IntoView {
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center justify-between">
                         <input
-                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-xl px-3 py-1 me-2 mb-2 h-12 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="search"
                             placeholder="Search"
                             value=rows.search
@@ -288,7 +296,7 @@ pub fn Aliases() -> impl IntoView {
 
                         <button
                             type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
                             on:click=move |_| {
                                 set_edit_modal_alias(None);
                                 set_edit_modal_waiting(false);
@@ -313,7 +321,7 @@ pub fn Aliases() -> impl IntoView {
                         </button>
                         <button
                             type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-white px-4 h-12 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
+                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
                         >
                             <svg
                                 class="w-6 h-6 me-2"
@@ -326,12 +334,12 @@ pub fn Aliases() -> impl IntoView {
                             New Random
                         </button>
                         <div class="flex flex-1"></div>
-                        <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-lg text-right px-4 h-12">
+                        <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-right px-4">
                             {count} " results"
                         </div>
                     </div>
 
-                    <div class="rounded-lg border-[1.5px] text-lg flex flex-col overflow-hidden">
+                    <div class="rounded-lg border-[1.5px] text-base flex flex-col overflow-hidden">
                         <div class="overflow-auto grow min-h-0">
                             <table class="table-auto text-left w-full">
                                 <TableContent
@@ -454,24 +462,25 @@ pub fn Aliases() -> impl IntoView {
                         <div class="flex flex-1 flex-col gap-2">
                             <label class="font-medium" for="alias">Alias</label>
                             <input
-                                class="flex flex-none sm:min-w-32 w-full rounded-lg border-[1.5px] border-input bg-transparent text-base px-3 py-1 h-12 w-full transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                class="flex flex-none sm:min-w-32 w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 type="email"
                                 placeholder="alias"
                             />
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="font-medium" for="alias">Domain</label>
-                            <input
-                                class="flex flex-none sm:min-w-32 w-auto rounded-lg border-[1.5px] border-input bg-transparent text-base px-3 py-1 h-12 w-full transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                type="text"
-                                placeholder="domain"
+                            <label class="font-medium" for="domain">Domain</label>
+                            <Select
+                                class="w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                                choices=allowed_domains
+                                value=edit_modal_domain
+                                set_value=set_edit_modal_domain
                             />
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="font-medium" for="target">Target</label>
                         <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-base px-3 py-1 h-12 w-full transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="email"
                             placeholder="target@example.com"
                             disabled
@@ -480,7 +489,7 @@ pub fn Aliases() -> impl IntoView {
                     <div class="flex flex-col gap-2">
                         <label class="font-medium" for="comment">Comment</label>
                         <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-base px-3 py-1 h-12 w-full transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="text"
                             placeholder="Comment"
                         />
