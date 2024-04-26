@@ -313,6 +313,14 @@ pub fn Aliases() -> impl IntoView {
         set_edit_modal_open(true);
     });
 
+    let on_row_change = move |ev: ChangeEvent<Alias>| {
+        spawn_local(async move {
+            if let Err(e) = update_alias_active(ev.changed_row.address.clone(), ev.changed_row.active).await {
+                error!("Failed to update active status of {}: {}", ev.changed_row.address, e);
+            }
+        });
+    };
+
     #[allow(unused_variables, non_snake_case)]
     let alias_row_renderer = move |class: Signal<String>,
                                    row: Alias,
@@ -463,6 +471,7 @@ pub fn Aliases() -> impl IntoView {
                                     reload_controller=reload_controller
                                     loading_row_display_limit=0
                                     on_row_count=set_count
+                                    on_change=on_row_change
                                 />
                             </table>
                         </div>
@@ -606,7 +615,8 @@ pub fn Aliases() -> impl IntoView {
                         <input
                             class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="email"
-                            placeholder="target@example.com" // TODO value from user
+                            // TODO value from user
+                            placeholder="target@example.com"
                             on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
                             prop:value=edit_modal_input_target
                             disabled
@@ -646,7 +656,15 @@ pub fn Aliases() -> impl IntoView {
                                     let edit_modal_close = edit_modal_close.clone();
                                     set_edit_modal_waiting(true);
                                     spawn_local(async move {
-                                        if let Err(e) = create_or_update_alias(alias.map(|x| x.address), edit_modal_input_alias(), edit_modal_input_domain(), edit_modal_input_target(), edit_modal_input_comment()).await {
+                                        if let Err(e) = create_or_update_alias(
+                                                alias.map(|x| x.address),
+                                                edit_modal_input_alias(),
+                                                edit_modal_input_domain(),
+                                                edit_modal_input_target(),
+                                                edit_modal_input_comment(),
+                                            )
+                                            .await
+                                        {
                                             error!("Failed to create/update: {}", e);
                                         } else {
                                             reload_controller.reload();
