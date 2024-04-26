@@ -1,4 +1,4 @@
-use crate::{aliases::Aliases, auth::{get_user, Login, Logout, Signup}};
+use crate::{aliases::Aliases, auth::{get_user, Login, Logout, Signup}, domains::Domains};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
 use leptos_router::{ActionForm, Route, Router, Routes, A};
@@ -105,7 +105,10 @@ pub fn App() -> impl IntoView {
 
 #[component]
 pub fn Main() -> impl IntoView {
-    view! { <Aliases/> }
+    view! {
+        <Domains/>
+        <Aliases/>
+    }
 }
 
 #[component]
