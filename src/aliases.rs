@@ -16,6 +16,23 @@ use sqlx::{QueryBuilder, Row};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 #[table(sortable, classes_provider = TailwindClassesPreset, thead_cell_renderer = THeadCellRenderer)]
+pub struct Domain {
+    #[table(class = "w-40")]
+    pub domain: String,
+    #[table(class = "w-40")]
+    pub owner: String,
+    pub catch_all: Option<String>,
+    #[table(class = "w-1", renderer = "SliderRenderer")]
+    pub public: bool,
+    #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
+    pub created_at: DateTime<Utc>,
+    #[table(class = "w-1", renderer = "SliderRenderer")]
+    pub active: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+#[table(sortable, classes_provider = TailwindClassesPreset, thead_cell_renderer = THeadCellRenderer)]
 pub struct Alias {
     #[table(class = "w-40")]
     pub address: String,
@@ -38,6 +55,52 @@ pub struct AliasQuery {
     sort: VecDeque<(usize, ColumnSort)>,
     range: Range<usize>,
     search: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainQuery {
+    #[serde(default)]
+    sort: VecDeque<(usize, ColumnSort)>,
+    range: Range<usize>,
+    search: String,
+}
+
+#[server]
+pub async fn allowed_domains() -> Result<Vec<Domain>, ServerFnError> {
+    let mut query = QueryBuilder::new("SELECT * FROM domains");
+    //TODO if !search.is_empty() {
+    //TODO     query.push(" WHERE domain LIKE concat('%', ");
+    //TODO     query.push_bind(&search);
+    //TODO     query.push(", '%')");
+    //TODO }
+
+    let pool = crate::database::ssr::pool()?;
+    Ok(query.build_query_as::<Domain>().fetch_all(&pool).await?)
+}
+
+#[server]
+pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnError> {
+    let DomainQuery { sort, range, search } = query;
+
+    let mut query = QueryBuilder::new("SELECT * FROM domains");
+    if !search.is_empty() {
+        query.push(" WHERE domain LIKE concat('%', ");
+        query.push_bind(&search);
+        query.push(", '%')");
+    }
+
+    if let Some(order) = Domain::sorting_to_sql(&sort) {
+        query.push(" ");
+        query.push(order);
+    }
+
+    query.push(" LIMIT ");
+    query.push_bind(range.len() as i64);
+    query.push(" OFFSET ");
+    query.push_bind(range.start as i64);
+
+    let pool = crate::database::ssr::pool()?;
+    Ok(query.build_query_as::<Domain>().fetch_all(&pool).await?)
 }
 
 #[server]
@@ -157,10 +220,8 @@ pub fn Aliases() -> impl IntoView {
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
-    let (allowed_domains, set_allowed_domains) = create_signal(vec![
-        "example.com".to_string(),
-        "test.local".to_string(),
-    ]);
+    let (allowed_domains, set_allowed_domains) =
+        create_signal(vec!["example.com".to_string(), "test.local".to_string()]);
 
     let (delete_modal_alias, set_delete_modal_alias) = create_signal(None);
     let (delete_modal_open, set_delete_modal_open) = create_signal(false);
@@ -184,7 +245,40 @@ pub fn Aliases() -> impl IntoView {
             .close();
     });
 
-    let (edit_modal_domain, set_edit_modal_domain) = create_signal("example.com".to_string());
+    let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
+    let (edit_modal_input_alias, set_edit_modal_input_alias) = create_signal("".to_string());
+    let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
+    let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
+        set_edit_modal_alias(edit_alias.clone());
+
+        let allowed_domains = allowed_domains.get();
+        if let Some(edit_alias) = edit_alias {
+            let (alias, domain) = match edit_alias.address.split_once('@') {
+                Some((alias, domain)) => (alias.to_string(), domain.to_string()),
+                None => (edit_alias.address.clone(), "".to_string()),
+            };
+            set_edit_modal_alias(Some(edit_alias.clone()));
+            set_edit_modal_input_alias(alias.to_string());
+            if !allowed_domains.contains(&domain) {
+                set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
+            } else {
+                set_edit_modal_input_domain(domain);
+            }
+            set_edit_modal_input_comment(edit_alias.comment.clone());
+        } else {
+            // Only set the input domain if the current one is not in the list
+            // of allowed domains. This allows users to keep the old value
+            // between alias creations, making it easier to create multiple
+            // aliases on the same domain.
+            set_edit_modal_input_alias("".to_string());
+            if !allowed_domains.contains(&edit_modal_input_domain()) {
+                set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
+            }
+            set_edit_modal_input_comment("".to_string());
+        }
+        set_edit_modal_waiting(false);
+        set_edit_modal_open(true);
+    });
 
     #[allow(unused_variables, non_snake_case)]
     let alias_row_renderer = move |class: Signal<String>,
@@ -202,12 +296,7 @@ pub fn Aliases() -> impl IntoView {
                     <div class="inline-flex items-center rounded-md">
                         <button
                             class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
-                            on:click=move |_| {
-                                set_edit_modal_alias(Some(edit_alias.clone()));
-                                // TODO set_edit_modal_domain();
-                                set_edit_modal_waiting(false);
-                                set_edit_modal_open(true);
-                            }
+                            on:click=move |_| edit_modal_open_with(Some(edit_alias.clone()))
                         >
 
                             <span>
@@ -297,11 +386,7 @@ pub fn Aliases() -> impl IntoView {
                         <button
                             type="button"
                             class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
-                            on:click=move |_| {
-                                set_edit_modal_alias(None);
-                                set_edit_modal_waiting(false);
-                                set_edit_modal_open(true);
-                            }
+                            on:click=move |_| edit_modal_open_with(None)
                         >
 
                             <svg
@@ -377,8 +462,7 @@ pub fn Aliases() -> impl IntoView {
                         </div>
                         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                             <h3 class="text-xl font-semibold leading-6 text-gray-900">
-                                "Delete "
-                                {delete_modal_alias}
+                                "Delete " {delete_modal_alias}
                             </h3>
                             <div class="mt-2">
                                 <p class="text-base text-gray-500">
@@ -458,40 +542,56 @@ pub fn Aliases() -> impl IntoView {
 
                 </h3>
                 <div class="flex flex-col gap-3">
-                    <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex flex-col sm:flex-row">
                         <div class="flex flex-1 flex-col gap-2">
-                            <label class="font-medium" for="alias">Alias</label>
-                            <input
-                                class="flex flex-none sm:min-w-32 w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                type="email"
-                                placeholder="alias"
-                            />
+                            <label class="font-medium" for="alias">
+                                Alias
+                            </label>
+                            <div class="flex flex-row">
+                                <input
+                                    class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    type="email"
+                                    placeholder="alias"
+                                    on:input=move |ev| set_edit_modal_input_alias(event_target_value(&ev))
+                                    prop:value=edit_modal_input_alias
+                                />
+                                <span class="inline-flex flex-none text-base items-center mx-2">@</span>
+                            </div>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="font-medium" for="domain">Domain</label>
+                            <label class="font-medium" for="domain">
+                                Domain
+                            </label>
                             <Select
                                 class="w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
                                 choices=allowed_domains
-                                value=edit_modal_domain
-                                set_value=set_edit_modal_domain
+                                value=edit_modal_input_domain
+                                set_value=set_edit_modal_input_domain
                             />
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="target">Target</label>
+                        <label class="font-medium" for="target">
+                            Target
+                        </label>
                         <input
                             class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="email"
                             placeholder="target@example.com"
+                            // TODO
                             disabled
                         />
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="comment">Comment</label>
+                        <label class="font-medium" for="comment">
+                            Comment
+                        </label>
                         <input
                             class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="text"
                             placeholder="Comment"
+                            on:input=move |ev| set_edit_modal_input_comment(event_target_value(&ev))
+                            prop:value=edit_modal_input_comment
                         />
                     </div>
                     <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">

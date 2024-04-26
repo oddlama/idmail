@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local, Utc};
-use leptos::{html::Dialog, *};
+use leptos::{html::{Dialog, Select}, *};
 use leptos_struct_table::*;
 
 #[component]
@@ -194,21 +194,26 @@ pub fn Select(
     value: ReadSignal<String>,
     set_value: WriteSignal<String>,
 ) -> impl IntoView {
+    let select_el = create_node_ref::<Select>();
+    create_effect(move |_| {
+        if let Some(select) = select_el.get_untracked() {
+            select.set_value(&value());
+        }
+    });
+
     let option_class = Signal::derive(move || option_class.get());
     view! {
         <select
+            ref=select_el
             class=class
             on:change=move |ev| {
                 let new_value = event_target_value(&ev);
                 set_value(new_value);
             }
         >
-            <For
-                each=choices
-                key=|x| x.clone()
-                let:child
-            >
-                <SelectOption value class=option_class id=child.clone() />
+
+            <For each=choices key=|x| x.clone() let:child>
+                <SelectOption value class=option_class id=child.clone()/>
             </For>
         </select>
     }
@@ -222,11 +227,7 @@ pub fn SelectOption(
 ) -> impl IntoView {
     let id_copy = id.clone();
     view! {
-        <option
-            class=class
-            value=id.clone()
-            selected=move || value() == id_copy
-        >
+        <option class=class value=id.clone() selected=move || value() == id_copy>
             {id}
         </option>
     }

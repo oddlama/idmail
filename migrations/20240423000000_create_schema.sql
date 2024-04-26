@@ -14,8 +14,9 @@ CREATE TABLE IF NOT EXISTS user_permissions (
 
 CREATE TABLE domains (
 	domain     TEXT NOT NULL PRIMARY KEY,
-	owner      TEXT NOT NULL,
-	catch_all  TEXT NOT NULL,
+	owner      TEXT,
+	catch_all  TEXT,
+	public     BOOL NOT NULL DEFAULT FALSE,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	active     BOOL NOT NULL DEFAULT TRUE
 	-- FOREIGN KEY (owner) REFERENCES users (username) ON DELETE CASCADE
