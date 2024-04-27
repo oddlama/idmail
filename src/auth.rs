@@ -1,99 +1,53 @@
 use leptos::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct User {
+    /// The username / mailbox address
     pub username: String,
+    /// The associated password hash
     pub password: String,
-    pub permissions: HashSet<String>,
+    /// Whether the user is a mailbox
+    pub mailbox: bool,
+    /// Whether the user is an admin
     pub admin: bool,
+    /// Whether the user is active
     pub active: bool,
-    pub created_at: String,
-}
-
-impl Default for User {
-    fn default() -> Self {
-        let permissions = HashSet::new();
-
-        Self {
-            username: "guest".to_string(),
-            password: "".to_string(),
-            permissions,
-            admin: false,
-            active: true,
-            created_at: "".to_string(),
-        }
-    }
 }
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
     pub use super::User;
-    use anyhow::anyhow;
+    use anyhow::{anyhow, Context};
     pub use axum_session_auth::{Authentication, HasPermission, SessionSqlitePool};
     pub use sqlx::SqlitePool;
     pub use std::collections::HashSet;
     pub type AuthSession = axum_session_auth::AuthSession<User, String, SessionSqlitePool, SqlitePool>;
-    pub use crate::database::ssr::{auth, pool};
     pub use async_trait::async_trait;
     pub use bcrypt::{hash, verify, DEFAULT_COST};
 
     impl User {
-        pub async fn get_with_passhash(username: &str, pool: &SqlitePool) -> Option<Self> {
-            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE id = ?")
-                .bind(username)
-                .fetch_one(pool)
-                .await
-                .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let sql_user_perms =
-                sqlx::query_as::<_, SqlPermissionTokens>("SELECT token FROM user_permissions WHERE user_id = ?;")
-                    .bind(username)
-                    .fetch_all(pool)
-                    .await
-                    .ok()?;
-
-            Some(sqluser.into_user(Some(sql_user_perms)))
-        }
-
         pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
-            User::get_with_passhash(username, pool).await
+            let user = sqlx::query_as::<_, User>(
+                "SELECT username, password, FALSE AS is_mailbox, admin, active \
+                FROM users WHERE username = $1 \
+                UNION SELECT address AS username, password, TRUE AS is_mailbox, FALSE AS admin, active \
+                FROM mailboxes WHERE address = $1",
+            )
+            .bind(username)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+
+            Some(user)
         }
-
-        pub async fn get_from_username_with_passhash(name: String, pool: &SqlitePool) -> Option<Self> {
-            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE username = ?")
-                .bind(name)
-                .fetch_one(pool)
-                .await
-                .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let sql_user_perms =
-                sqlx::query_as::<_, SqlPermissionTokens>("SELECT token FROM user_permissions WHERE user_id = ?;")
-                    .bind(&sqluser.username)
-                    .fetch_all(pool)
-                    .await
-                    .ok()?;
-
-            Some(sqluser.into_user(Some(sql_user_perms)))
-        }
-
-        pub async fn get_from_username(name: String, pool: &SqlitePool) -> Option<Self> {
-            User::get_from_username_with_passhash(name, pool).await
-        }
-    }
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct SqlPermissionTokens {
-        pub token: String,
     }
 
     #[async_trait]
     impl Authentication<User, String, SqlitePool> for User {
         async fn load_user(username: String, pool: Option<&SqlitePool>) -> Result<User, anyhow::Error> {
-            let pool = pool.unwrap();
+            let pool = pool.context("Missing sql pool")?;
 
             User::get(&username, pool)
                 .await
@@ -115,59 +69,28 @@ pub mod ssr {
 
     #[async_trait]
     impl HasPermission<SqlitePool> for User {
-        async fn has(&self, perm: &str, _pool: &Option<&SqlitePool>) -> bool {
-            self.permissions.contains(perm)
-        }
-    }
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct SqlUser {
-        pub username: String,
-        pub password: String,
-        pub admin: bool,
-        pub active: bool,
-        pub created_at: String,
-    }
-
-    impl SqlUser {
-        pub fn into_user(self, sql_user_perms: Option<Vec<SqlPermissionTokens>>) -> User {
-            User {
-                username: self.username,
-                permissions: if let Some(user_perms) = sql_user_perms {
-                    user_perms.into_iter().map(|x| x.token).collect::<HashSet<String>>()
-                } else {
-                    HashSet::<String>::new()
-                },
-                password: self.password,
-                admin: self.admin,
-                active: self.active,
-                created_at: self.created_at,
-            }
+        async fn has(&self, _perm: &str, _pool: &Option<&SqlitePool>) -> bool {
+            false
         }
     }
 }
 
 #[server]
 pub async fn get_user() -> Result<Option<User>, ServerFnError> {
-    use crate::database::ssr::auth;
-
-    let auth = auth()?;
-
+    let auth = crate::database::ssr::auth()?;
     Ok(auth.current_user)
 }
 
-#[server(Login, "/api")]
+#[server]
 pub async fn login(username: String, password: String, remember: Option<String>) -> Result<(), ServerFnError> {
-    use self::ssr::*;
+    let pool = crate::database::ssr::pool()?;
+    let auth = crate::database::ssr::auth()?;
 
-    let pool = pool()?;
-    let auth = auth()?;
-
-    let user = User::get_from_username_with_passhash(username, &pool)
+    let user = User::get(&username, &pool)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist."))?;
 
-    match verify(password, &user.password)? {
+    match bcrypt::verify(password, &user.password)? {
         true => {
             auth.login_user(user.username);
             auth.remember_user(remember.is_some());
@@ -178,50 +101,10 @@ pub async fn login(username: String, password: String, remember: Option<String>)
     }
 }
 
-#[server(Signup, "/api")]
-pub async fn signup(
-    username: String,
-    password: String,
-    password_confirmation: String,
-    remember: Option<String>,
-) -> Result<(), ServerFnError> {
-    use self::ssr::*;
-
-    let pool = pool()?;
-    let auth = auth()?;
-
-    if password != password_confirmation {
-        return Err(ServerFnError::ServerError("Passwords did not match.".to_string()));
-    }
-
-    let password_hashed = hash(password, DEFAULT_COST).unwrap();
-
-    sqlx::query("INSERT INTO users (username, password) VALUES (?,?)")
-        .bind(username.clone())
-        .bind(password_hashed)
-        .execute(&pool)
-        .await?;
-
-    let user = User::get_from_username(username, &pool)
-        .await
-        .ok_or_else(|| ServerFnError::new("Signup failed: User does not exist."))?;
-
-    auth.login_user(user.username);
-    auth.remember_user(remember.is_some());
-
-    leptos_axum::redirect("/");
-
-    Ok(())
-}
-
-#[server(Logout, "/api")]
+#[server]
 pub async fn logout() -> Result<(), ServerFnError> {
-    use self::ssr::*;
-
-    let auth = auth()?;
-
+    let auth = crate::database::ssr::auth()?;
     auth.logout_user();
     leptos_axum::redirect("/");
-
     Ok(())
 }

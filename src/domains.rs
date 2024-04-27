@@ -38,11 +38,17 @@ pub struct DomainQuery {
 }
 
 #[server]
-pub async fn allowed_domains() -> Result<Vec<Domain>, ServerFnError> {
-    let mut query = QueryBuilder::new("SELECT * FROM domains");
+pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    let mut query = QueryBuilder::new("SELECT domain FROM domains");
+    query.push(" WHERE public = TRUE OR owner = ?");
+    query.push_bind(&user.username);
 
     let pool = crate::database::ssr::pool()?;
-    Ok(query.build_query_as::<Domain>().fetch_all(&pool).await?)
+    Ok(query.build_query_scalar::<String>().fetch_all(&pool).await?)
 }
 
 #[server]
@@ -245,19 +251,28 @@ pub fn Domains() -> impl IntoView {
 
     let on_row_change = move |ev: ChangeEvent<Domain>| {
         spawn_local(async move {
-            if let Err(e) = update_domain_public_and_active(ev.changed_row.domain.clone(), ev.changed_row.public, ev.changed_row.active).await {
-                error!("Failed to update public or active status of {}: {}", ev.changed_row.domain, e);
+            if let Err(e) = update_domain_public_and_active(
+                ev.changed_row.domain.clone(),
+                ev.changed_row.public,
+                ev.changed_row.active,
+            )
+            .await
+            {
+                error!(
+                    "Failed to update public or active status of {}: {}",
+                    ev.changed_row.domain, e
+                );
             }
         });
     };
 
     #[allow(unused_variables, non_snake_case)]
     let domain_row_renderer = move |class: Signal<String>,
-                                   row: Domain,
-                                   index: usize,
-                                   selected: Signal<bool>,
-                                   on_select: EventHandler<MouseEvent>,
-                                   on_change: EventHandler<ChangeEvent<Domain>>| {
+                                    row: Domain,
+                                    index: usize,
+                                    selected: Signal<bool>,
+                                    on_select: EventHandler<MouseEvent>,
+                                    on_change: EventHandler<ChangeEvent<Domain>>| {
         let delete_domain = row.domain.clone();
         let edit_domain = row.clone();
         view! {

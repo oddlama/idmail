@@ -1,4 +1,4 @@
-use crate::{aliases::Aliases, auth::{get_user, Login, Logout, Signup}, domains::Domains};
+use crate::{aliases::Aliases, auth::{get_user, Login, Logout}, domains::Domains};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
 use leptos_router::{ActionForm, Route, Router, Routes, A};
@@ -7,10 +7,9 @@ use leptos_router::{ActionForm, Route, Router, Routes, A};
 pub fn App() -> impl IntoView {
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
-    let signup = create_server_action::<Signup>();
 
     let user = create_resource(
-        move || (login.version().get(), signup.version().get(), logout.version().get()),
+        move || (login.version().get(), logout.version().get()),
         move |_| get_user(),
     );
     provide_meta_context();
@@ -32,9 +31,6 @@ pub fn App() -> impl IntoView {
                                 Err(e) => {
                                     view! {
                                         <div>
-                                            <A href="/signup" class="text-blue-400">
-                                                "Signup"
-                                            </A>
                                             <span class="text-gray-300">", "</span>
                                             <A href="/login" class="text-blue-400">
                                                 "Login"
@@ -48,9 +44,6 @@ pub fn App() -> impl IntoView {
                                 Ok(None) => {
                                     view! {
                                         <div>
-                                            <A href="/signup" class="text-blue-400">
-                                                "Signup"
-                                            </A>
                                             <span class="text-gray-300">", "</span>
                                             <A href="/login" class="text-blue-400">
                                                 "Login"
@@ -83,7 +76,6 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     // Route
                     <Route path="" view=Main/>
-                    <Route path="signup" view=move || view! { <Signup action=signup/> }/>
                     <Route path="login" view=move || view! { <Login action=login/> }/>
                     <Route
                         path="settings"
@@ -136,34 +128,6 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
             </label>
             <button type="submit" class="button w-full">
                 "Log In"
-            </button>
-        </ActionForm>
-    }
-}
-
-#[component]
-pub fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
-    view! {
-        <ActionForm action=action>
-            <h1>"Sign Up"</h1>
-            <label>
-                "User ID:" <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input"/>
-            </label>
-            <br/>
-            <label>
-                "Password:" <input type="password" placeholder="Password" name="password" class="auth-input"/>
-            </label>
-            <br/>
-            <label>
-                "Confirm Password:"
-                <input type="password" placeholder="Password again" name="password_confirmation" class="auth-input"/>
-            </label>
-            <br/>
-            <label>"Remember me?" <input type="checkbox" name="remember" class="auth-input"/></label>
-
-            <br/>
-            <button type="submit" class="button">
-                "Sign Up"
             </button>
         </ActionForm>
     }

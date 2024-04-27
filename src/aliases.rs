@@ -5,6 +5,7 @@ use crate::utils::{Modal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
+use leptos::leptos_dom::is_browser;
 use leptos::{ev::MouseEvent, html::Dialog, logging::error, *};
 use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
@@ -188,8 +189,16 @@ pub fn Aliases() -> impl IntoView {
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
-    let (allowed_domains, set_allowed_domains) =
-        create_signal(vec!["example.com".to_string(), "test.local".to_string()]);
+    let (allowed_domains, set_allowed_domains) = create_signal(vec![]);
+    if is_browser() {
+        spawn_local(async move {
+            use crate::domains::allowed_domains;
+            match allowed_domains().await {
+                Err(e) => error!("Failed to load allowed domains: {}", e),
+                Ok(domains) => set_allowed_domains(domains),
+            }
+        });
+    }
 
     let (delete_modal_alias, set_delete_modal_alias) = create_signal(None);
     let (delete_modal_open, set_delete_modal_open) = create_signal(false);
