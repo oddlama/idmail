@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_router::{ActionForm, A};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,9 +31,9 @@ pub mod ssr {
     impl User {
         pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
             let user = sqlx::query_as::<_, User>(
-                "SELECT username, password, FALSE AS is_mailbox, admin, active \
+                "SELECT username, password, FALSE AS mailbox, admin, active \
                 FROM users WHERE username = $1 \
-                UNION SELECT address AS username, password, TRUE AS is_mailbox, FALSE AS admin, active \
+                UNION SELECT address AS username, password, TRUE AS mailbox, FALSE AS admin, active \
                 FROM mailboxes WHERE address = $1",
             )
             .bind(username)
@@ -82,7 +83,7 @@ pub async fn get_user() -> Result<Option<User>, ServerFnError> {
 }
 
 #[server]
-pub async fn login(username: String, password: String, remember: Option<String>) -> Result<(), ServerFnError> {
+pub async fn login(username: String, password: String) -> Result<(), ServerFnError> {
     let pool = crate::database::ssr::pool()?;
     let auth = crate::database::ssr::auth()?;
 
@@ -90,15 +91,19 @@ pub async fn login(username: String, password: String, remember: Option<String>)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist."))?;
 
-    match bcrypt::verify(password, &user.password)? {
-        true => {
-            auth.login_user(user.username);
-            auth.remember_user(remember.is_some());
-            leptos_axum::redirect("/");
-            Ok(())
-        }
-        false => Err(ServerFnError::ServerError("Password does not match.".to_string())),
-    }
+    auth.login_user(user.username);
+    auth.remember_user(false);
+    leptos_axum::redirect("/");
+    Ok(())
+    // TODO match bcrypt::verify(password, &user.password)? {
+    // TODO     true => {
+    // TODO         auth.login_user(user.username);
+    // TODO         auth.remember_user(false);
+    // TODO         leptos_axum::redirect("/");
+    // TODO         Ok(())
+    // TODO     }
+    // TODO     false => Err(ServerFnError::ServerError("Password does not match.".to_string())),
+    // TODO }
 }
 
 #[server]
@@ -107,4 +112,91 @@ pub async fn logout() -> Result<(), ServerFnError> {
     auth.logout_user();
     leptos_axum::redirect("/");
     Ok(())
+}
+
+#[component]
+pub fn Login() -> impl IntoView {
+    let login = create_server_action::<Login>();
+    let login_value = Signal::derive(move || {
+        login
+            .value()
+            .get()
+            .unwrap_or_else(|| Ok(()))
+    });
+
+    view! {
+        <div class="relative flex min-h-screen flex-col bg-background">
+            <div class="w-full h-screen flex items-center justify-center px-4">
+            <ErrorBoundary
+                // the fallback receives a signal containing current errors
+                fallback=|errors| view! {
+                    <div class="error">
+                        <p>"Not a number! Errors: "</p>
+                        // we can render a list of errors as strings, if we'd like
+                        <ul>
+                            {move || errors.get()
+                                .into_iter()
+                                .map(|(_, e)| view! { <li>{e.to_string()}</li>})
+                                .collect_view()
+                            }
+                        </ul>
+                    </div>
+                }
+            >
+            
+            {login_value}
+                <ActionForm action=login class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
+                    <div class="flex flex-col space-y-1.5 p-6">
+                        <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
+                        <p class="text-sm text-gray-500">
+                            "Enter your email address and password below to login to your account"
+                        </p>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <div class="grid gap-4">
+                            <div class="grid gap-2">
+                                <label
+                                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    for="username"
+                                >
+                                    Email
+                                </label>
+                                <input
+                                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    type="text"
+                                    name="username"
+                                    placeholder="username@example.com"
+                                    required="required"
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <div class="flex items-center">
+                                    <label
+                                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        for="password"
+                                    >
+                                        Password
+                                    </label>
+                                </div>
+                                <input
+                                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    type="password"
+                                    name="password"
+                                    required="required"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                tabindex="0"
+                                class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
+                            >
+                                Login
+                            </button>
+                        </div>
+                    </div>
+                </ActionForm>
+            </ErrorBoundary>
+            </div>
+        </div>
+    }
 }

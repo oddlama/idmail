@@ -53,6 +53,10 @@ pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
 
 #[server]
 pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
     let DomainQuery { sort, range, search } = query;
 
     let mut query = QueryBuilder::new("SELECT * FROM domains");
@@ -82,6 +86,10 @@ pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnErr
 
 #[server]
 pub async fn domain_count() -> Result<usize, ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
     let pool = crate::database::ssr::pool()?;
     let count: i64 = sqlx::query("SELECT COUNT(*) FROM domains")
         .fetch_one(&pool)
@@ -99,7 +107,9 @@ pub async fn create_or_update_domain(
     catch_all: String,
     public: bool,
 ) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user().await?;
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let pool = crate::database::ssr::pool()?;
     // TODO: FIXME: AAA auth
     // TODO: FIXME: duplicate detect

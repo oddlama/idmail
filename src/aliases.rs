@@ -42,6 +42,9 @@ pub struct AliasQuery {
 
 #[server]
 pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let AliasQuery { sort, range, search } = query;
 
     let mut query = QueryBuilder::new("SELECT * FROM aliases");
@@ -69,6 +72,9 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
 
 #[server]
 pub async fn alias_count() -> Result<usize, ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let pool = crate::database::ssr::pool()?;
     let count: i64 = sqlx::query("SELECT COUNT(*) FROM aliases")
         .fetch_one(&pool)
@@ -80,6 +86,9 @@ pub async fn alias_count() -> Result<usize, ServerFnError> {
 
 #[server]
 pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let pool = crate::database::ssr::pool()?;
 
     sqlx::query("DELETE FROM aliases WHERE address = $1")
