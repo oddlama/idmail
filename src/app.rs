@@ -56,7 +56,7 @@ pub fn Main() -> impl IntoView {
                                     <span>{format!("Logged in as: {}", user.username)}</span>
                                     <Logout action=logout/>
                                 </div>
-                                <Domains user />
+                                <Domains user/>
                                 <Aliases/>
                             }
                                 .into_view()

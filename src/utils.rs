@@ -1,5 +1,10 @@
 use chrono::{DateTime, Local, Utc};
-use leptos::{html::{Dialog, Select}, *};
+use leptos::{
+    html::{Dialog, Select},
+    logging::error,
+    *,
+};
+use leptos_icons::Icon;
 use leptos_struct_table::*;
 
 #[component]
@@ -230,5 +235,74 @@ pub fn SelectOption(
         <option class=class value=id.clone() selected=move || value() == id_copy>
             {id}
         </option>
+    }
+}
+
+#[component]
+pub fn DeleteModal(
+    #[prop(into)] data: RwSignal<Option<String>>,
+    #[prop(into)] text: View,
+    #[prop(into)] on_confirm: Callback<String>,
+) -> impl IntoView {
+    let (modal_waiting, set_modal_waiting) = create_signal(false);
+    let modal_elem = create_node_ref::<Dialog>();
+    let open = Signal::derive(move || data.get().is_some());
+
+    create_effect(move |_| {
+        if !open() {
+            set_modal_waiting(false);
+        }
+    });
+
+    view! {
+        <Modal open dialog_el=modal_elem>
+            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all sm:w-full sm:max-w-lg">
+                <div class="bg-white py-3">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600"/>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-2xl tracking-tight font-semibold text-gray-900">"Delete " {data}</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">{text}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
+                    <button
+                        type="button"
+                        class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
+                        on:click=move |_ev| {
+                            data.set(None);
+                        }
+                    >
+
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        disabled=modal_waiting
+                        class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-red-600 hover:bg-red-500 font-semibold text-white focus:ring-4 focus:ring-red-300 sm:w-auto"
+                        class=("!bg-red-500", modal_waiting)
+                        on:click=move |_ev| {
+                            if let Some(data) = data.get() {
+                                if !modal_waiting() {
+                                    on_confirm(data);
+                                    set_modal_waiting(true);
+                                }
+                            }
+                        }
+                    >
+
+                        <Show when=modal_waiting>
+                            <Icon icon=icondata::CgSpinner class="inline w-5 h-5 me-2 text-red-900 animate-spin"/>
+                        </Show>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </Modal>
     }
 }

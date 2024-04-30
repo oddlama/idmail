@@ -143,14 +143,15 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                 <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
                     <div class="flex flex-col space-y-1.5 p-6">
                         <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
-                        <p class="text-sm text-gray-500">
-                            "Enter your mailbox address and password below to login"
-                        </p>
+                        <p class="text-sm text-gray-500">"Enter your mailbox address and password below to login"</p>
                     </div>
                     <div class="p-6 pt-0">
                         <div class="grid gap-4">
                             <div class="grid gap-2">
-                                <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="username">
+                                <label
+                                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    for="username"
+                                >
                                     Email
                                 </label>
                                 <input
