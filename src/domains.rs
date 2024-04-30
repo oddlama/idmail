@@ -295,7 +295,7 @@ pub fn Domains() -> impl IntoView {
                             class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| edit_modal_open_with(Some(edit_domain.clone()))
                         >
-                            <Icon icon=icondata::FiEdit class="w-5 h-5" />
+                            <Icon icon=icondata::FiEdit class="w-5 h-5"/>
                         </button>
                         <button
                             class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
@@ -305,7 +305,8 @@ pub fn Domains() -> impl IntoView {
                                 set_delete_modal_open(true);
                             }
                         >
-                            <Icon icon=icondata::FiTrash2 class="w-5 h-5" />
+
+                            <Icon icon=icondata::FiTrash2 class="w-5 h-5"/>
                         </button>
                     </div>
                 </td>
@@ -339,7 +340,7 @@ pub fn Domains() -> impl IntoView {
                             class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
                             on:click=move |_| edit_modal_open_with(None)
                         >
-                            <Icon icon=icondata::FiPlus class="w-6 h-6 me-2" />
+                            <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
                             New
                         </button>
                         <div class="flex flex-1"></div>
@@ -371,7 +372,7 @@ pub fn Domains() -> impl IntoView {
                 <div class="bg-white py-3">
                     <div class="sm:flex sm:items-start">
                         <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                            <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600" />
+                            <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600"/>
                         </div>
                         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                             <h3 class="text-xl font-semibold leading-6 text-gray-900">
@@ -419,7 +420,7 @@ pub fn Domains() -> impl IntoView {
                     >
 
                         <Show when=delete_modal_waiting>
-                            <Icon icon=icondata::CgSpinner class="inline w-4 h-4 me-2 text-red-900 animate-spin" />
+                            <Icon icon=icondata::CgSpinner class="inline w-4 h-4 me-2 text-red-900 animate-spin"/>
                         </Show>
                         Delete
                     </button>
@@ -520,7 +521,7 @@ pub fn Domains() -> impl IntoView {
                         >
 
                             <Show when=edit_modal_waiting>
-                                <Icon icon=icondata::CgSpinner class="inline w-4 h-4 me-2 text-blue-900 animate-spin" />
+                                <Icon icon=icondata::CgSpinner class="inline w-4 h-4 me-2 text-blue-900 animate-spin"/>
                             </Show>
                             Save
                         </button>

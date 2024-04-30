@@ -32,6 +32,7 @@ pub fn Main() -> impl IntoView {
         move || (login.version().get(), logout.version().get()),
         move |_| get_user(),
     );
+
     view! {
         <Transition fallback=move || {
             view! { <span class="text-gray-300">"Loading..."</span> }
@@ -41,18 +42,14 @@ pub fn Main() -> impl IntoView {
                     .map(|user| match user {
                         Err(e) => {
                             view! {
-                                <div>
-                                    <span class="text-gray-300">", "</span>
-                                    <A href="/login" class="text-blue-400">
-                                        "Login"
-                                    </A>
-                                    <span class="text-gray-300">", "</span>
+                                <div class="absolute">
                                     <span>{format!("Login error: {}", e)}</span>
                                 </div>
+                                <Login action=login/>
                             }
                                 .into_view()
                         }
-                        Ok(None) => view! { <Login/> }.into_view(),
+                        Ok(None) => view! { <Login action=login/> }.into_view(),
                         Ok(Some(user)) => {
                             view! {
                                 <div>

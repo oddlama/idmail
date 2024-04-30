@@ -116,14 +116,13 @@ pub async fn logout() -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Login() -> impl IntoView {
-    let login = create_server_action::<Login>();
-    let login_value = Signal::derive(move || login.value().get().unwrap_or(Ok(())));
+pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
+    let action_value = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
 
     view! {
         <div class="relative flex min-h-screen flex-col bg-background">
             <div class="w-full h-screen flex items-center justify-center px-4">
-                <ActionForm action=login class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
+                <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
                     <div class="flex flex-col space-y-1.5 p-6">
                         <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
                         <p class="text-sm text-gray-500">
@@ -163,12 +162,11 @@ pub fn Login() -> impl IntoView {
                                     required="required"
                                 />
                             </div>
-                            <ErrorBoundary // the fallback receives a signal containing current errors
-                            fallback=|errors| {
+                            <ErrorBoundary fallback=|errors| {
                                 view! {
                                     <div class="rounded-lg p-4 flex bg-red-100">
                                         <div>
-                                            <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400" />
+                                            <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
                                         </div>
                                         <div class="ml-3 text-red-700">
                                             <p>
@@ -179,13 +177,14 @@ pub fn Login() -> impl IntoView {
                                                         .map(|(_, e)| view! { {e.to_string()} })
                                                         .collect_view()
                                                 }}
+
                                             </p>
                                         </div>
                                     </div>
                                 }
                             }>
 
-                                {login_value}
+                                {action_value}
                             </ErrorBoundary>
                             <button
                                 type="submit"
