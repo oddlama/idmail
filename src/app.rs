@@ -5,7 +5,7 @@ use crate::{
 };
 use leptos::*;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
-use leptos_router::{ActionForm, Route, Router, Routes, A};
+use leptos_router::{ActionForm, Route, Router, Routes};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -54,11 +54,9 @@ pub fn Main() -> impl IntoView {
                             view! {
                                 <div>
                                     <span>{format!("Logged in as: {}", user.username)}</span>
-                                </div>
-                                <div>
                                     <Logout action=logout/>
                                 </div>
-                                <Domains/>
+                                <Domains user />
                                 <Aliases/>
                             }
                                 .into_view()

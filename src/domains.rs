@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::utils::{Modal, Select};
+use crate::auth::User;
+use crate::utils::Modal;
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
@@ -11,7 +12,7 @@ use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
-use sqlx::{QueryBuilder, Row};
+use sqlx::QueryBuilder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
@@ -45,7 +46,7 @@ pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
 
     let mut query = QueryBuilder::new("SELECT domain FROM domains");
-    query.push(" WHERE public = TRUE OR owner = ?");
+    query.push(" WHERE public = TRUE OR owner = ");
     query.push_bind(&user.username);
 
     let pool = crate::database::ssr::pool()?;
@@ -60,15 +61,19 @@ pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnErr
 
     let DomainQuery { sort, range, search } = query;
 
-    let mut query = QueryBuilder::new("SELECT * FROM domains");
+    let mut query = QueryBuilder::new("SELECT * FROM domains WHERE 1=1");
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
     if !search.is_empty() {
-        query.push(" WHERE domain LIKE concat('%', ");
+        query.push(" AND ( domain LIKE concat('%', ");
         query.push_bind(&search);
         query.push(", '%') OR owner LIKE concat('%', ");
         query.push_bind(&search);
         query.push(", '%') OR catch_all LIKE concat('%', ");
         query.push_bind(&search);
-        query.push(", '%')");
+        query.push(", '%') )");
     }
 
     if let Some(order) = Domain::sorting_to_sql(&sort) {
@@ -91,11 +96,14 @@ pub async fn domain_count() -> Result<usize, ServerFnError> {
         .await?
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
 
+    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM domains");
+    if !user.admin {
+        query.push(" WHERE owner = ");
+        query.push_bind(&user.username);
+    }
+
     let pool = crate::database::ssr::pool()?;
-    let count: i64 = sqlx::query("SELECT COUNT(*) FROM domains")
-        .fetch_one(&pool)
-        .await?
-        .get(0);
+    let count = query.build_query_scalar::<i64>().fetch_one(&pool).await?;
 
     Ok(count as usize)
 }
@@ -112,20 +120,33 @@ pub async fn create_or_update_domain(
         .await?
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let pool = crate::database::ssr::pool()?;
-    // TODO: FIXME: AAA auth
+
+    // Only admins can assign other owners
+    let owner = if user.admin { owner.trim() } else { &user.username };
+    // Empty owner -> self owned
+    let owner = if owner.is_empty() { &user.username } else { owner };
+    // Only admins may create public domains
+    let public = public && user.admin;
     // TODO: FIXME: duplicate detect
     // TODO: FIXME: invalid detect (empty, @@, ...)
 
     if let Some(old_domain) = old_domain {
-        sqlx::query("UPDATE domains SET domain = ?, owner = ?, catch_all = ?, public = ? WHERE domain = ?")
-            .bind(domain)
-            .bind(owner)
-            .bind(catch_all)
-            .bind(public)
-            .bind(old_domain)
-            .execute(&pool)
-            .await
-            .map(|_| ())?;
+        let mut query = QueryBuilder::new("UPDATE domains SET domain = ");
+        query.push_bind(domain);
+        query.push(", owner = ");
+        query.push_bind(owner);
+        query.push(", catch_all = ");
+        query.push_bind(catch_all);
+        query.push(", public = ");
+        query.push_bind(public);
+        query.push(" WHERE domain = ");
+        query.push_bind(old_domain);
+        if !user.admin {
+            query.push(" AND owner = ?");
+            query.push_bind(&user.username);
+        }
+
+        query.build().execute(&pool).await.map(|_| ())?;
     } else {
         sqlx::query("INSERT INTO domains (domain, owner, catch_all, public) VALUES (?, ?, ?, ?)")
             .bind(domain)
@@ -142,13 +163,49 @@ pub async fn create_or_update_domain(
 
 #[server]
 pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
-    let pool = crate::database::ssr::pool()?;
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
 
-    sqlx::query("DELETE FROM domains WHERE domain = $1")
-        .bind(domain)
-        .execute(&pool)
-        .await
-        .map(|_| ())?;
+    let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
+    query.push_bind(domain);
+
+    // Non-admins can only delete their own domains
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
+    Ok(())
+}
+
+#[server]
+pub async fn update_domain_public_and_active(domain: String, public: bool, active: bool) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    let pool = crate::database::ssr::pool()?;
+    // Only admins may create public domains
+    let public = public && user.admin;
+
+    let mut query = QueryBuilder::new("UPDATE domains SET public = ");
+    query.push_bind(public);
+    query.push(", active = ");
+    query.push_bind(active);
+    query.push(" WHERE domain = ");
+    query.push_bind(domain);
+
+    // Non-admins can only change their own domains
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
     Ok(())
 }
 
@@ -186,26 +243,8 @@ impl TableDataProvider<Domain> for DomainTableDataProvider {
     }
 }
 
-#[server]
-pub async fn update_domain_public_and_active(domain: String, public: bool, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user().await?;
-    let pool = crate::database::ssr::pool()?;
-    // TODO: FIXME: AAA
-    // TODO: FIXME: AAA auth
-
-    sqlx::query("UPDATE domains SET public = ?, active = ? WHERE domain = ?")
-        .bind(public)
-        .bind(active)
-        .bind(domain)
-        .execute(&pool)
-        .await
-        .map(|_| ())?;
-
-    Ok(())
-}
-
 #[component]
-pub fn Domains() -> impl IntoView {
+pub fn Domains(user: User) -> impl IntoView {
     let mut rows = DomainTableDataProvider::default();
     let default_sorting = VecDeque::from([(5, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
@@ -375,7 +414,7 @@ pub fn Domains() -> impl IntoView {
                             <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600"/>
                         </div>
                         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 class="text-xl font-semibold leading-6 text-gray-900">
+                            <h3 class="text-2xl tracking-tight font-semibold text-gray-900">
                                 "Delete " {delete_modal_domain}
                             </h3>
                             <div class="mt-2">
@@ -429,7 +468,7 @@ pub fn Domains() -> impl IntoView {
         </Modal>
         <Modal open=edit_modal_open dialog_el=edit_modal_elem>
             <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all w-full sm:min-w-[512px]">
-                <h3 class="text-xl mt-2 mb-4 font-semibold leading-6 text-gray-900">
+                <h3 class="text-2xl tracking-tight mt-2 mb-4 font-semibold text-gray-900">
                     {move || {
                         if let Some(domain) = edit_modal_domain() {
                             format!("Edit {}", domain.domain)
@@ -441,7 +480,7 @@ pub fn Domains() -> impl IntoView {
                 </h3>
                 <div class="flex flex-col gap-3">
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="domain">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="domain">
                             Domain
                         </label>
                         <input
@@ -453,7 +492,7 @@ pub fn Domains() -> impl IntoView {
                         />
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="owner">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="owner">
                             Owner
                         </label>
                         <input
@@ -462,11 +501,11 @@ pub fn Domains() -> impl IntoView {
                             placeholder="admin"
                             on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
                             prop:value=edit_modal_input_owner
-                            disabled
+                            disabled=move || !user.admin
                         />
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="catchall">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="catchall">
                             Catch All
                         </label>
                         <input

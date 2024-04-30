@@ -200,7 +200,7 @@ pub fn Aliases() -> impl IntoView {
     let (count, set_count) = create_signal(0);
 
     let (allowed_domains, set_allowed_domains) = create_signal(vec![]);
-    if is_browser() {
+    let refresh_domains = move || {
         spawn_local(async move {
             use crate::domains::allowed_domains;
             match allowed_domains().await {
@@ -208,6 +208,10 @@ pub fn Aliases() -> impl IntoView {
                 Ok(domains) => set_allowed_domains(domains),
             }
         });
+    };
+
+    if is_browser() {
+        refresh_domains();
     }
 
     let (delete_modal_alias, set_delete_modal_alias) = create_signal(None);
@@ -237,6 +241,7 @@ pub fn Aliases() -> impl IntoView {
     let (edit_modal_input_target, set_edit_modal_input_target) = create_signal("".to_string());
     let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
+        refresh_domains();
         set_edit_modal_alias(edit_alias.clone());
 
         let allowed_domains = allowed_domains.get();
@@ -384,7 +389,7 @@ pub fn Aliases() -> impl IntoView {
                             <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600"/>
                         </div>
                         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 class="text-xl font-semibold leading-6 text-gray-900">
+                            <h3 class="text-2xl tracking-tight font-semibold text-gray-900">
                                 "Delete " {delete_modal_alias}
                             </h3>
                             <div class="mt-2">
@@ -438,7 +443,7 @@ pub fn Aliases() -> impl IntoView {
         </Modal>
         <Modal open=edit_modal_open dialog_el=edit_modal_elem>
             <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all w-full sm:min-w-[512px]">
-                <h3 class="text-xl mt-2 mb-4 font-semibold leading-6 text-gray-900">
+                <h3 class="text-2xl tracking-tight mt-2 mb-4 font-semibold text-gray-900">
                     {move || {
                         if let Some(alias) = edit_modal_alias() {
                             format!("Edit {}", alias.address)
@@ -451,7 +456,7 @@ pub fn Aliases() -> impl IntoView {
                 <div class="flex flex-col gap-3">
                     <div class="flex flex-col sm:flex-row">
                         <div class="flex flex-1 flex-col gap-2">
-                            <label class="font-medium" for="alias">
+                            <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="alias">
                                 Alias
                             </label>
                             <div class="flex flex-row">
@@ -466,7 +471,7 @@ pub fn Aliases() -> impl IntoView {
                             </div>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="font-medium" for="domain">
+                            <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="domain">
                                 Domain
                             </label>
                             <Select
@@ -478,7 +483,7 @@ pub fn Aliases() -> impl IntoView {
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="target">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="target">
                             Target
                         </label>
                         <input
@@ -492,7 +497,7 @@ pub fn Aliases() -> impl IntoView {
                         />
                     </div>
                     <div class="flex flex-col gap-2">
-                        <label class="font-medium" for="comment">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="comment">
                             Comment
                         </label>
                         <input

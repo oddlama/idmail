@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::{ActionForm, A};
+use leptos_router::ActionForm;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,6 +83,24 @@ pub async fn get_user() -> Result<Option<User>, ServerFnError> {
     Ok(auth.current_user)
 }
 
+/// Get the current user and ensure that it is an admin
+#[server]
+pub async fn auth_admin() -> Result<User, ServerFnError> {
+    let user = get_user().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    if !user.admin {
+        return Err(ServerFnError::new("Unauthorized"));
+    }
+
+    Ok(user)
+}
+
+/// Ensure that the user is logged in
+#[server]
+pub async fn auth_any_user() -> Result<User, ServerFnError> {
+    let user = get_user().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    Ok(user)
+}
+
 #[server]
 pub async fn login(username: String, password: String) -> Result<(), ServerFnError> {
     let pool = crate::database::ssr::pool()?;
@@ -126,16 +144,13 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                     <div class="flex flex-col space-y-1.5 p-6">
                         <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
                         <p class="text-sm text-gray-500">
-                            "Enter your email address and password below to login to your account"
+                            "Enter your mailbox address and password below to login"
                         </p>
                     </div>
                     <div class="p-6 pt-0">
                         <div class="grid gap-4">
                             <div class="grid gap-2">
-                                <label
-                                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    for="username"
-                                >
+                                <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="username">
                                     Email
                                 </label>
                                 <input
