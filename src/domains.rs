@@ -495,10 +495,10 @@ pub fn Domains(user: User) -> impl IntoView {
                                     spawn_local(async move {
                                         if let Err(e) = create_or_update_domain(
                                                 domain.map(|x| x.domain),
-                                                edit_modal_input_domain(),
-                                                edit_modal_input_owner(),
-                                                edit_modal_input_catchall(),
-                                                edit_modal_input_public(),
+                                                edit_modal_input_domain.get_untracked(),
+                                                edit_modal_input_owner.get_untracked(),
+                                                edit_modal_input_catchall.get_untracked(),
+                                                edit_modal_input_public.get_untracked(),
                                             )
                                             .await
                                         {

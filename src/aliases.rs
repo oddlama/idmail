@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::utils::{DeleteModal, Modal, Select};
+use crate::utils::{DeleteModal, EditModal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
 use leptos::leptos_dom::is_browser;
-use leptos::{ev::MouseEvent, html::Dialog, logging::error, *};
+use leptos::{ev::MouseEvent, logging::error, *};
 use leptos_icons::Icon;
 use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
@@ -215,25 +215,16 @@ pub fn Aliases() -> impl IntoView {
     }
 
     let delete_modal_alias = create_rw_signal(None);
-
-    let (edit_modal_alias, set_edit_modal_alias) = create_signal(None);
-    let (edit_modal_open, set_edit_modal_open) = create_signal(false);
-    let (edit_modal_waiting, set_edit_modal_waiting) = create_signal(false);
-    let edit_modal_elem = create_node_ref::<Dialog>();
-    let edit_modal_close = Callback::new(move |()| {
-        edit_modal_elem
-            .get_untracked()
-            .expect("edit dialog to have been created")
-            .close();
-    });
+    let edit_modal_alias = create_rw_signal(None);
 
     let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
     let (edit_modal_input_alias, set_edit_modal_input_alias) = create_signal("".to_string());
     let (edit_modal_input_target, set_edit_modal_input_target) = create_signal("".to_string());
     let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
+
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
         refresh_domains();
-        set_edit_modal_alias(edit_alias.clone());
+        edit_modal_alias.set(Some(edit_alias.clone()));
 
         let allowed_domains = allowed_domains.get();
         if let Some(edit_alias) = edit_alias {
@@ -241,7 +232,6 @@ pub fn Aliases() -> impl IntoView {
                 Some((alias, domain)) => (alias.to_string(), domain.to_string()),
                 None => (edit_alias.address.clone(), "".to_string()),
             };
-            set_edit_modal_alias(Some(edit_alias.clone()));
             set_edit_modal_input_alias(alias.to_string());
             if !allowed_domains.contains(&domain) {
                 set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
@@ -263,9 +253,26 @@ pub fn Aliases() -> impl IntoView {
             //set_edit_modal_input_target("".to_string());
             set_edit_modal_input_comment("".to_string());
         }
-        set_edit_modal_waiting(false);
-        set_edit_modal_open(true);
     });
+
+    let on_edit = move |data: Option<Alias>| {
+        spawn_local(async move {
+            if let Err(e) = create_or_update_alias(
+                data.map(|x| x.address),
+                edit_modal_input_alias.get_untracked(),
+                edit_modal_input_domain.get_untracked(),
+                edit_modal_input_target.get_untracked(),
+                edit_modal_input_comment.get_untracked(),
+            )
+            .await
+            {
+                error!("Failed to create/update: {}", e);
+            } else {
+                reload_controller.reload();
+            }
+            edit_modal_alias.set(None);
+        });
+    };
 
     let on_row_change = move |ev: ChangeEvent<Alias>| {
         spawn_local(async move {
@@ -370,6 +377,7 @@ pub fn Aliases() -> impl IntoView {
                 </div>
             </div>
         </div>
+
         <DeleteModal
             data=delete_modal_alias
             text="Are you sure you want to delete this alias? This action cannot be undone.".into_view()
@@ -384,135 +392,75 @@ pub fn Aliases() -> impl IntoView {
                 });
             }
         />
-        <Modal open=edit_modal_open dialog_el=edit_modal_elem>
-            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all w-full sm:min-w-[512px]">
-                <h3 class="text-2xl tracking-tight mt-2 mb-4 font-semibold text-gray-900">
-                    {move || {
-                        if let Some(alias) = edit_modal_alias() {
-                            format!("Edit {}", alias.address)
-                        } else {
-                            "New alias".to_string()
-                        }
-                    }}
 
-                </h3>
-                <div class="flex flex-col gap-3">
-                    <div class="flex flex-col sm:flex-row">
-                        <div class="flex flex-1 flex-col gap-2">
-                            <label
-                                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                for="alias"
-                            >
-                                Alias
-                            </label>
-                            <div class="flex flex-row">
-                                <input
-                                    class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    type="email"
-                                    placeholder="alias"
-                                    on:input=move |ev| set_edit_modal_input_alias(event_target_value(&ev))
-                                    prop:value=edit_modal_input_alias
-                                />
-                                <span class="inline-flex flex-none text-base items-center mx-2">@</span>
-                            </div>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label
-                                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                for="domain"
-                            >
-                                Domain
-                            </label>
-                            <Select
-                                class="w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
-                                choices=allowed_domains
-                                value=edit_modal_input_domain
-                                set_value=set_edit_modal_input_domain
-                            />
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="target"
-                        >
-                            Target
-                        </label>
+        <EditModal data=edit_modal_alias what="Alias".to_string() get_title=move |x| { &x.address } on_confirm=on_edit>
+            <div class="flex flex-col sm:flex-row">
+                <div class="flex flex-1 flex-col gap-2">
+                    <label
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        for="alias"
+                    >
+                        Alias
+                    </label>
+                    <div class="flex flex-row">
                         <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             type="email"
-                            // TODO value from user
-                            placeholder="target@example.com"
-                            on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
-                            prop:value=edit_modal_input_target
-                            disabled
+                            placeholder="alias"
+                            on:input=move |ev| set_edit_modal_input_alias(event_target_value(&ev))
+                            prop:value=edit_modal_input_alias
                         />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="comment"
-                        >
-                            Comment
-                        </label>
-                        <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            type="text"
-                            placeholder="Comment"
-                            on:input=move |ev| set_edit_modal_input_comment(event_target_value(&ev))
-                            prop:value=edit_modal_input_comment
-                        />
-                    </div>
-                    // TODO: active
-                    <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
-                        <button
-                            type="button"
-                            class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
-                            on:click=move |_ev| {
-                                edit_modal_close(());
-                            }
-                        >
-
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            disabled=edit_modal_waiting
-                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
-                            class=("!bg-blue-500", edit_modal_waiting)
-                            on:click=move |_ev| {
-                                if !edit_modal_waiting() {
-                                    let alias = edit_modal_alias();
-                                    let edit_modal_close = edit_modal_close.clone();
-                                    set_edit_modal_waiting(true);
-                                    spawn_local(async move {
-                                        if let Err(e) = create_or_update_alias(
-                                                alias.map(|x| x.address),
-                                                edit_modal_input_alias(),
-                                                edit_modal_input_domain(),
-                                                edit_modal_input_target(),
-                                                edit_modal_input_comment(),
-                                            )
-                                            .await
-                                        {
-                                            error!("Failed to create/update: {}", e);
-                                        } else {
-                                            reload_controller.reload();
-                                        }
-                                        edit_modal_close(());
-                                    });
-                                }
-                            }
-                        >
-
-                            <Show when=edit_modal_waiting>
-                                <Icon icon=icondata::CgSpinner class="inline w-5 h-5 me-2 text-blue-900 animate-spin"/>
-                            </Show>
-                            Save
-                        </button>
+                        <span class="inline-flex flex-none text-base items-center mx-2">@</span>
                     </div>
                 </div>
+                <div class="flex flex-col gap-2">
+                    <label
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        for="domain"
+                    >
+                        Domain
+                    </label>
+                    <Select
+                        class="w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                        choices=allowed_domains
+                        value=edit_modal_input_domain
+                        set_value=set_edit_modal_input_domain
+                    />
+                </div>
             </div>
-        </Modal>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="target"
+                >
+                    Target
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="email"
+                    // TODO value from user
+                    placeholder="target@example.com"
+                    on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
+                    prop:value=edit_modal_input_target
+                    disabled
+                />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="comment"
+                >
+                    Comment
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="text"
+                    placeholder="Comment"
+                    on:input=move |ev| set_edit_modal_input_comment(event_target_value(&ev))
+                    prop:value=edit_modal_input_comment
+                />
+            </div>
+        // TODO: active
+        </EditModal>
     }
 }

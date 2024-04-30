@@ -1,7 +1,6 @@
 use chrono::{DateTime, Local, Utc};
 use leptos::{
     html::{Dialog, Select},
-    logging::error,
     *,
 };
 use leptos_icons::Icon;
@@ -235,6 +234,76 @@ pub fn SelectOption(
         <option class=class value=id.clone() selected=move || value() == id_copy>
             {id}
         </option>
+    }
+}
+
+#[component]
+pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
+    #[prop(into)] data: RwSignal<Option<Option<T>>>,
+    what: String,
+    get_title: F,
+    #[prop(into)] on_confirm: Callback<Option<T>>,
+    children: Children,
+) -> impl IntoView {
+    let (modal_waiting, set_modal_waiting) = create_signal(false);
+    let modal_elem = create_node_ref::<Dialog>();
+    let open = Signal::derive(move || data.get().is_some());
+
+    create_effect(move |_| {
+        if !open() {
+            set_modal_waiting(false);
+        }
+    });
+
+    view! {
+        <Modal open dialog_el=modal_elem>
+            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all w-full sm:min-w-[512px]">
+                <h3 class="text-2xl tracking-tight mt-2 mb-4 font-semibold text-gray-900">
+                    {move || {
+                        if let Some(Some(data)) = data.get() {
+                            format!("Edit {}", get_title(&data))
+                        } else {
+                            format!("New {}", what)
+                        }
+                    }}
+
+                </h3>
+                <div class="flex flex-col gap-3">
+                    {children()} <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
+                        <button
+                            type="button"
+                            class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
+                            on:click=move |_ev| {
+                                data.set(None);
+                            }
+                        >
+
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            disabled=modal_waiting
+                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
+                            class=("!bg-blue-500", modal_waiting)
+                            on:click=move |_ev| {
+                                if let Some(data) = data.get() {
+                                    if !modal_waiting() {
+                                        on_confirm(data);
+                                        set_modal_waiting(true);
+                                    }
+                                }
+                            }
+                        >
+
+                            <Show when=modal_waiting>
+                                <Icon icon=icondata::CgSpinner class="inline w-5 h-5 me-2 text-blue-900 animate-spin"/>
+                            </Show>
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Modal>
     }
 }
 
