@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_icons::Icon;
 use leptos_router::{ActionForm, A};
 use serde::{Deserialize, Serialize};
 
@@ -89,7 +90,7 @@ pub async fn login(username: String, password: String) -> Result<(), ServerFnErr
 
     let user = User::get(&username, &pool)
         .await
-        .ok_or_else(|| ServerFnError::new("User does not exist."))?;
+        .ok_or_else(|| ServerFnError::new("Wrong password or invalid user"))?;
 
     auth.login_user(user.username);
     auth.remember_user(false);
@@ -117,34 +118,11 @@ pub async fn logout() -> Result<(), ServerFnError> {
 #[component]
 pub fn Login() -> impl IntoView {
     let login = create_server_action::<Login>();
-    let login_value = Signal::derive(move || {
-        login
-            .value()
-            .get()
-            .unwrap_or_else(|| Ok(()))
-    });
+    let login_value = Signal::derive(move || login.value().get().unwrap_or(Ok(())));
 
     view! {
         <div class="relative flex min-h-screen flex-col bg-background">
             <div class="w-full h-screen flex items-center justify-center px-4">
-            <ErrorBoundary
-                // the fallback receives a signal containing current errors
-                fallback=|errors| view! {
-                    <div class="error">
-                        <p>"Not a number! Errors: "</p>
-                        // we can render a list of errors as strings, if we'd like
-                        <ul>
-                            {move || errors.get()
-                                .into_iter()
-                                .map(|(_, e)| view! { <li>{e.to_string()}</li>})
-                                .collect_view()
-                            }
-                        </ul>
-                    </div>
-                }
-            >
-            
-            {login_value}
                 <ActionForm action=login class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
                     <div class="flex flex-col space-y-1.5 p-6">
                         <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
@@ -185,6 +163,30 @@ pub fn Login() -> impl IntoView {
                                     required="required"
                                 />
                             </div>
+                            <ErrorBoundary // the fallback receives a signal containing current errors
+                            fallback=|errors| {
+                                view! {
+                                    <div class="rounded-lg p-4 flex bg-red-100">
+                                        <div>
+                                            <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400" />
+                                        </div>
+                                        <div class="ml-3 text-red-700">
+                                            <p>
+                                                {move || {
+                                                    errors
+                                                        .get()
+                                                        .into_iter()
+                                                        .map(|(_, e)| view! { {e.to_string()} })
+                                                        .collect_view()
+                                                }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            }>
+
+                                {login_value}
+                            </ErrorBoundary>
                             <button
                                 type="submit"
                                 tabindex="0"
@@ -195,7 +197,6 @@ pub fn Login() -> impl IntoView {
                         </div>
                     </div>
                 </ActionForm>
-            </ErrorBoundary>
             </div>
         </div>
     }

@@ -22,10 +22,12 @@ console_error_panic_hook = "0.1"
 console_log = "1.0"
 futures = "0.3"
 http = "1.0"
+icondata = "0.3.0"
 leptos = { version = "0.6", features = ["nightly"] }
 leptos-struct-table = "0.9.1"
 leptos-use = "0.10"
 leptos_axum = { version = "0.6", optional = true }
+leptos_icons = "0.3.0"
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 leptos_toaster = { version = "0.1.3", features = ["builtin_toast"] }
