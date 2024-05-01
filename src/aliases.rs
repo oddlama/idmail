@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
+use crate::auth::User;
 use crate::utils::{DeleteModal, EditModal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
@@ -29,6 +30,8 @@ pub struct Alias {
     pub n_sent: i64,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
+    #[table(class = "w-40")]
+    pub owner: String,
     #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,
 }
@@ -46,15 +49,22 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
     let user = crate::auth::get_user()
         .await?
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
     let AliasQuery { sort, range, search } = query;
 
-    let mut query = QueryBuilder::new("SELECT * FROM aliases");
+    let mut query = QueryBuilder::new("SELECT * FROM aliases WHERE 1=1");
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
     if !search.is_empty() {
-        query.push(" WHERE address LIKE concat('%', ");
+        query.push(" AND ( address LIKE concat('%', ");
         query.push_bind(&search);
         query.push(", '%') OR comment LIKE concat('%', ");
         query.push_bind(&search);
-        query.push(", '%')");
+        query.push(", '%') OR owner LIKE concat('%', ");
+        query.push_bind(&search);
+        query.push(", '%') )");
     }
 
     if let Some(order) = Alias::sorting_to_sql(&sort) {
@@ -76,11 +86,15 @@ pub async fn alias_count() -> Result<usize, ServerFnError> {
     let user = crate::auth::get_user()
         .await?
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM aliases");
+    if !user.admin {
+        query.push(" WHERE owner = ");
+        query.push_bind(&user.username);
+    }
+
     let pool = crate::database::ssr::pool()?;
-    let count: i64 = sqlx::query("SELECT COUNT(*) FROM aliases")
-        .fetch_one(&pool)
-        .await?
-        .get(0);
+    let count = query.build_query_scalar::<i64>().fetch_one(&pool).await?;
 
     Ok(count as usize)
 }
@@ -90,13 +104,93 @@ pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
     let user = crate::auth::get_user()
         .await?
         .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    let mut query = QueryBuilder::new("DELETE FROM aliases WHERE address = ");
+    query.push_bind(address);
+
+    // Non-admins can only delete their own aliases
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
+    Ok(())
+}
+
+#[server]
+pub async fn create_or_update_alias(
+    old_address: Option<String>,
+    alias: String,
+    domain: String,
+    target: String,
+    comment: String,
+    owner: String,
+) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
     let pool = crate::database::ssr::pool()?;
 
-    sqlx::query("DELETE FROM aliases WHERE address = $1")
-        .bind(address)
-        .execute(&pool)
-        .await
-        .map(|_| ())?;
+    // Only admins can assign other owners
+    let owner = if user.admin { owner.trim() } else { &user.username };
+    // Empty owner -> self owned
+    let owner = if owner.is_empty() { &user.username } else { owner };
+    // TODO: FIXME: target= empty?self:..
+    // TODO: FIXME: duplicate detect
+    // TODO: FIXME: invalid detect (empty, @@, ...)
+
+    let address = format!("{alias}@{domain}");
+    if let Some(old_address) = old_address {
+        let mut query = QueryBuilder::new("UPDATE aliases SET address = ");
+        query.push_bind(address);
+        query.push(", target = ");
+        query.push_bind(target);
+        query.push(", comment = ");
+        query.push_bind(comment);
+        query.push(", owner = ");
+        query.push_bind(owner);
+        query.push(" WHERE address = ");
+        query.push_bind(old_address);
+        if !user.admin {
+            query.push(" AND owner = ?");
+            query.push_bind(&user.username);
+        }
+
+        query.build().execute(&pool).await.map(|_| ())?;
+    } else {
+        sqlx::query("INSERT INTO aliases (address, target, comment, owner) VALUES (?, ?, ?, ?)")
+            .bind(address)
+            .bind(target)
+            .bind(comment)
+            .bind(owner)
+            .execute(&pool)
+            .await
+            .map(|_| ())?;
+    }
+
+    Ok(())
+}
+
+#[server]
+pub async fn update_alias_active(address: String, active: bool) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let mut query = QueryBuilder::new("UPDATE aliases SET active = ");
+    query.push_bind(active);
+    query.push(" WHERE address = ");
+    query.push_bind(address);
+
+    // Non-admins can only change their own domains
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
     Ok(())
 }
 
@@ -134,64 +228,10 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
     }
 }
 
-#[server]
-pub async fn update_alias_active(address: String, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user().await?;
-    let pool = crate::database::ssr::pool()?;
-    // TODO: FIXME: AAA
-    // TODO: FIXME: AAA auth
-
-    sqlx::query("UPDATE aliases SET active = ? WHERE address = ?")
-        .bind(active)
-        .bind(address)
-        .execute(&pool)
-        .await
-        .map(|_| ())?;
-
-    Ok(())
-}
-
-#[server]
-pub async fn create_or_update_alias(
-    old_address: Option<String>,
-    alias: String,
-    domain: String,
-    target: String,
-    comment: String,
-) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user().await?;
-    let pool = crate::database::ssr::pool()?;
-    // TODO: FIXME: AAA auth
-    // TODO: FIXME: duplicate detect
-    // TODO: FIXME: invalid detect (empty, @@, ...)
-
-    let address = format!("{alias}@{domain}");
-    if let Some(old_address) = old_address {
-        sqlx::query("UPDATE aliases SET address = ?, target = ?, comment = ? WHERE address = ?")
-            .bind(address)
-            .bind(target)
-            .bind(comment)
-            .bind(old_address)
-            .execute(&pool)
-            .await
-            .map(|_| ())?;
-    } else {
-        sqlx::query("INSERT INTO aliases (address, target, comment) VALUES (?, ?, ?)")
-            .bind(address)
-            .bind(target)
-            .bind(comment)
-            .execute(&pool)
-            .await
-            .map(|_| ())?;
-    }
-
-    Ok(())
-}
-
 #[component]
-pub fn Aliases() -> impl IntoView {
+pub fn Aliases(user: User) -> impl IntoView {
     let mut rows = AliasTableDataProvider::default();
-    let default_sorting = VecDeque::from([(6, ColumnSort::Descending)]);
+    let default_sorting = VecDeque::from([(7, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
     let sorting = create_rw_signal(default_sorting);
 
@@ -221,6 +261,7 @@ pub fn Aliases() -> impl IntoView {
     let (edit_modal_input_alias, set_edit_modal_input_alias) = create_signal("".to_string());
     let (edit_modal_input_target, set_edit_modal_input_target) = create_signal("".to_string());
     let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
+    let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
 
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
         refresh_domains();
@@ -263,6 +304,7 @@ pub fn Aliases() -> impl IntoView {
                 edit_modal_input_domain.get_untracked(),
                 edit_modal_input_target.get_untracked(),
                 edit_modal_input_comment.get_untracked(),
+                edit_modal_input_owner.get_untracked(),
             )
             .await
             {
@@ -460,7 +502,23 @@ pub fn Aliases() -> impl IntoView {
                     prop:value=edit_modal_input_comment
                 />
             </div>
-        // TODO: active
+            // TODO: active
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="owner"
+                >
+                    Owner
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="text"
+                    placeholder="admin"
+                    on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
+                    prop:value=edit_modal_input_owner
+                    disabled=move || !user.admin
+                />
+            </div>
         </EditModal>
     }
 }

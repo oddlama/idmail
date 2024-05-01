@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 use std::ops::Range;
 
 use crate::auth::User;
-use crate::utils::{DeleteModal, Modal};
+use crate::utils::{DeleteModal, EditModal};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
-use leptos::{ev::MouseEvent, html::Dialog, logging::error, *};
+use leptos::{ev::MouseEvent, logging::error, *};
 use leptos_icons::Icon;
 use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
@@ -20,13 +20,13 @@ use sqlx::QueryBuilder;
 pub struct Domain {
     #[table(class = "w-40")]
     pub domain: String,
-    #[table(class = "w-40")]
-    pub owner: String,
     pub catch_all: Option<String>,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub public: bool,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
+    #[table(class = "w-40")]
+    pub owner: String,
     #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,
 }
@@ -69,9 +69,9 @@ pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnErr
     if !search.is_empty() {
         query.push(" AND ( domain LIKE concat('%', ");
         query.push_bind(&search);
-        query.push(", '%') OR owner LIKE concat('%', ");
-        query.push_bind(&search);
         query.push(", '%') OR catch_all LIKE concat('%', ");
+        query.push_bind(&search);
+        query.push(", '%') OR owner LIKE concat('%', ");
         query.push_bind(&search);
         query.push(", '%') )");
     }
@@ -109,12 +109,32 @@ pub async fn domain_count() -> Result<usize, ServerFnError> {
 }
 
 #[server]
+pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
+    query.push_bind(domain);
+
+    // Non-admins can only delete their own domains
+    if !user.admin {
+        query.push(" AND owner = ");
+        query.push_bind(&user.username);
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
+    Ok(())
+}
+
+#[server]
 pub async fn create_or_update_domain(
     old_domain: Option<String>,
     domain: String,
-    owner: String,
     catch_all: String,
     public: bool,
+    owner: String,
 ) -> Result<(), ServerFnError> {
     let user = crate::auth::get_user()
         .await?
@@ -133,12 +153,12 @@ pub async fn create_or_update_domain(
     if let Some(old_domain) = old_domain {
         let mut query = QueryBuilder::new("UPDATE domains SET domain = ");
         query.push_bind(domain);
-        query.push(", owner = ");
-        query.push_bind(owner);
         query.push(", catch_all = ");
         query.push_bind(catch_all);
         query.push(", public = ");
         query.push_bind(public);
+        query.push(", owner = ");
+        query.push_bind(owner);
         query.push(" WHERE domain = ");
         query.push_bind(old_domain);
         if !user.admin {
@@ -148,36 +168,16 @@ pub async fn create_or_update_domain(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO domains (domain, owner, catch_all, public) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO domains (domain, catch_all, public, owner) VALUES (?, ?, ?, ?)")
             .bind(domain)
-            .bind(owner)
             .bind(catch_all)
             .bind(public)
+            .bind(owner)
             .execute(&pool)
             .await
             .map(|_| ())?;
     }
 
-    Ok(())
-}
-
-#[server]
-pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
-
-    let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
-    query.push_bind(domain);
-
-    // Non-admins can only delete their own domains
-    if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
-    }
-
-    let pool = crate::database::ssr::pool()?;
-    query.build().execute(&pool).await.map(|_| ())?;
     Ok(())
 }
 
@@ -254,27 +254,16 @@ pub fn Domains(user: User) -> impl IntoView {
     let (count, set_count) = create_signal(0);
 
     let delete_modal_domain = create_rw_signal(None);
-
-    let (edit_modal_domain, set_edit_modal_domain) = create_signal(None);
-    let (edit_modal_open, set_edit_modal_open) = create_signal(false);
-    let (edit_modal_waiting, set_edit_modal_waiting) = create_signal(false);
-    let edit_modal_elem = create_node_ref::<Dialog>();
-    let edit_modal_close = Callback::new(move |()| {
-        edit_modal_elem
-            .get_untracked()
-            .expect("edit dialog to have been created")
-            .close();
-    });
+    let edit_modal_domain = create_rw_signal(None);
 
     let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
-    let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
     let (edit_modal_input_catchall, set_edit_modal_input_catchall) = create_signal("".to_string());
     let (edit_modal_input_public, set_edit_modal_input_public) = create_signal(true);
+    let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
     let edit_modal_open_with = Callback::new(move |edit_domain: Option<Domain>| {
-        set_edit_modal_domain(edit_domain.clone());
+        edit_modal_domain.set(Some(edit_domain.clone()));
 
         if let Some(edit_domain) = edit_domain {
-            set_edit_modal_domain(Some(edit_domain.clone()));
             set_edit_modal_input_domain(edit_domain.domain.clone());
             set_edit_modal_input_owner(edit_domain.owner.clone());
             set_edit_modal_input_catchall(edit_domain.catch_all.unwrap_or("".to_string()).clone());
@@ -285,9 +274,26 @@ pub fn Domains(user: User) -> impl IntoView {
             set_edit_modal_input_catchall("".to_string());
             set_edit_modal_input_public(true);
         }
-        set_edit_modal_waiting(false);
-        set_edit_modal_open(true);
     });
+
+    let on_edit = move |data: Option<Domain>| {
+        spawn_local(async move {
+            if let Err(e) = create_or_update_domain(
+                data.map(|x| x.domain),
+                edit_modal_input_domain.get_untracked(),
+                edit_modal_input_catchall.get_untracked(),
+                edit_modal_input_public.get_untracked(),
+                edit_modal_input_owner.get_untracked(),
+            )
+            .await
+            {
+                error!("Failed to create/update: {}", e);
+            } else {
+                reload_controller.reload();
+            }
+            edit_modal_domain.set(None);
+        });
+    };
 
     let on_row_change = move |ev: ChangeEvent<Domain>| {
         spawn_local(async move {
@@ -410,116 +416,55 @@ pub fn Domains(user: User) -> impl IntoView {
             }
         />
 
-        <Modal open=edit_modal_open dialog_el=edit_modal_elem>
-            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all w-full sm:min-w-[512px]">
-                <h3 class="text-2xl tracking-tight mt-2 mb-4 font-semibold text-gray-900">
-                    {move || {
-                        if let Some(domain) = edit_modal_domain() {
-                            format!("Edit {}", domain.domain)
-                        } else {
-                            "New domain".to_string()
-                        }
-                    }}
-
-                </h3>
-                <div class="flex flex-col gap-3">
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="domain"
-                        >
-                            Domain
-                        </label>
-                        <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            type="text"
-                            placeholder="example.com"
-                            on:input=move |ev| set_edit_modal_input_domain(event_target_value(&ev))
-                            prop:value=edit_modal_input_domain
-                        />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="owner"
-                        >
-                            Owner
-                        </label>
-                        <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            type="text"
-                            placeholder="admin"
-                            on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
-                            prop:value=edit_modal_input_owner
-                            disabled=move || !user.admin
-                        />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="catchall"
-                        >
-                            Catch All
-                        </label>
-                        <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            type="text"
-                            placeholder="catch-all@example.com"
-                            on:input=move |ev| set_edit_modal_input_catchall(event_target_value(&ev))
-                            prop:value=edit_modal_input_catchall
-                        />
-                    </div>
-                    // TODO: public
-                    // TODO: active
-                    <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
-                        <button
-                            type="button"
-                            class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
-                            on:click=move |_ev| {
-                                edit_modal_close(());
-                            }
-                        >
-
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            disabled=edit_modal_waiting
-                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
-                            class=("!bg-blue-500", edit_modal_waiting)
-                            on:click=move |_ev| {
-                                if !edit_modal_waiting() {
-                                    let domain = edit_modal_domain();
-                                    let edit_modal_close = edit_modal_close.clone();
-                                    set_edit_modal_waiting(true);
-                                    spawn_local(async move {
-                                        if let Err(e) = create_or_update_domain(
-                                                domain.map(|x| x.domain),
-                                                edit_modal_input_domain.get_untracked(),
-                                                edit_modal_input_owner.get_untracked(),
-                                                edit_modal_input_catchall.get_untracked(),
-                                                edit_modal_input_public.get_untracked(),
-                                            )
-                                            .await
-                                        {
-                                            error!("Failed to create/update: {}", e);
-                                        } else {
-                                            reload_controller.reload();
-                                        }
-                                        edit_modal_close(());
-                                    });
-                                }
-                            }
-                        >
-
-                            <Show when=edit_modal_waiting>
-                                <Icon icon=icondata::CgSpinner class="inline w-5 h-5 me-2 text-blue-900 animate-spin"/>
-                            </Show>
-                            Save
-                        </button>
-                    </div>
-                </div>
+        <EditModal data=edit_modal_domain what="Domain".to_string() get_title=move |x| { &x.domain } on_confirm=on_edit>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="domain"
+                >
+                    Domain
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="text"
+                    placeholder="example.com"
+                    on:input=move |ev| set_edit_modal_input_domain(event_target_value(&ev))
+                    prop:value=edit_modal_input_domain
+                />
             </div>
-        </Modal>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="catchall"
+                >
+                    Catch All
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="text"
+                    placeholder="catch-all@example.com"
+                    on:input=move |ev| set_edit_modal_input_catchall(event_target_value(&ev))
+                    prop:value=edit_modal_input_catchall
+                />
+            </div>
+            // TODO: public
+            // TODO: active
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="owner"
+                >
+                    Owner
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="text"
+                    placeholder="admin"
+                    on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
+                    prop:value=edit_modal_input_owner
+                    disabled=move || !user.admin
+                />
+            </div>
+        </EditModal>
     }
 }
