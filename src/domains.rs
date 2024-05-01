@@ -134,6 +134,7 @@ pub async fn create_or_update_domain(
     domain: String,
     catch_all: String,
     public: bool,
+    active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
     let user = crate::auth::get_user()
@@ -157,6 +158,8 @@ pub async fn create_or_update_domain(
         query.push_bind(catch_all);
         query.push(", public = ");
         query.push_bind(public);
+        query.push(", active = ");
+        query.push_bind(active);
         query.push(", owner = ");
         query.push_bind(owner);
         query.push(" WHERE domain = ");
@@ -168,9 +171,10 @@ pub async fn create_or_update_domain(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO domains (domain, catch_all, public, owner) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO domains (domain, catch_all, public, active, owner) VALUES (?, ?, ?, ?, ?)")
             .bind(domain)
             .bind(catch_all)
+            .bind(active)
             .bind(public)
             .bind(owner)
             .execute(&pool)
@@ -259,20 +263,23 @@ pub fn Domains(user: User) -> impl IntoView {
     let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
     let (edit_modal_input_catchall, set_edit_modal_input_catchall) = create_signal("".to_string());
     let (edit_modal_input_public, set_edit_modal_input_public) = create_signal(true);
+    let (edit_modal_input_active, set_edit_modal_input_active) = create_signal(true);
     let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
     let edit_modal_open_with = Callback::new(move |edit_domain: Option<Domain>| {
         edit_modal_domain.set(Some(edit_domain.clone()));
 
         if let Some(edit_domain) = edit_domain {
             set_edit_modal_input_domain(edit_domain.domain.clone());
-            set_edit_modal_input_owner(edit_domain.owner.clone());
             set_edit_modal_input_catchall(edit_domain.catch_all.unwrap_or("".to_string()).clone());
             set_edit_modal_input_public(edit_domain.public);
+            set_edit_modal_input_active(edit_domain.active);
+            set_edit_modal_input_owner(edit_domain.owner.clone());
         } else {
             set_edit_modal_input_domain("".to_string());
-            set_edit_modal_input_owner("".to_string());
             set_edit_modal_input_catchall("".to_string());
             set_edit_modal_input_public(true);
+            set_edit_modal_input_active(true);
+            set_edit_modal_input_owner("".to_string());
         }
     });
 
@@ -283,6 +290,7 @@ pub fn Domains(user: User) -> impl IntoView {
                 edit_modal_input_domain.get_untracked(),
                 edit_modal_input_catchall.get_untracked(),
                 edit_modal_input_public.get_untracked(),
+                edit_modal_input_active.get_untracked(),
                 edit_modal_input_owner.get_untracked(),
             )
             .await
@@ -309,6 +317,7 @@ pub fn Domains(user: User) -> impl IntoView {
                     ev.changed_row.domain, e
                 );
             }
+            reload_controller.reload();
         });
     };
 
@@ -447,8 +456,6 @@ pub fn Domains(user: User) -> impl IntoView {
                     prop:value=edit_modal_input_catchall
                 />
             </div>
-            // TODO: public
-            // TODO: active
             <div class="flex flex-col gap-2">
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -464,6 +471,36 @@ pub fn Domains(user: User) -> impl IntoView {
                     prop:value=edit_modal_input_owner
                     disabled=move || !user.admin
                 />
+            </div>
+            <div class="flex flex-row gap-2 mt-2 items-center">
+                <input
+                    id="public"
+                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    type="checkbox"
+                    on:change=move |ev| set_edit_modal_input_public(event_target_checked(&ev))
+                    prop:checked=edit_modal_input_public
+                />
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="public"
+                >
+                    Public
+                </label>
+            </div>
+            <div class="flex flex-row gap-2 mt-2 items-center">
+                <input
+                    id="domains_active"
+                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    type="checkbox"
+                    on:change=move |ev| set_edit_modal_input_active(event_target_checked(&ev))
+                    prop:checked=edit_modal_input_active
+                />
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="domains_active"
+                >
+                    Active
+                </label>
             </div>
         </EditModal>
     }

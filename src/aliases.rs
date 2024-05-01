@@ -13,7 +13,7 @@ use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
-use sqlx::{QueryBuilder, Row};
+use sqlx::QueryBuilder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
@@ -126,6 +126,7 @@ pub async fn create_or_update_alias(
     domain: String,
     target: String,
     comment: String,
+    active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
     let user = crate::auth::get_user()
@@ -151,6 +152,8 @@ pub async fn create_or_update_alias(
         query.push_bind(comment);
         query.push(", owner = ");
         query.push_bind(owner);
+        query.push(", active = ");
+        query.push_bind(active);
         query.push(" WHERE address = ");
         query.push_bind(old_address);
         if !user.admin {
@@ -160,11 +163,12 @@ pub async fn create_or_update_alias(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO aliases (address, target, comment, owner) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO aliases (address, target, comment, owner, active) VALUES (?, ?, ?, ?)")
             .bind(address)
             .bind(target)
             .bind(comment)
             .bind(owner)
+            .bind(active)
             .execute(&pool)
             .await
             .map(|_| ())?;
@@ -261,6 +265,7 @@ pub fn Aliases(user: User) -> impl IntoView {
     let (edit_modal_input_alias, set_edit_modal_input_alias) = create_signal("".to_string());
     let (edit_modal_input_target, set_edit_modal_input_target) = create_signal("".to_string());
     let (edit_modal_input_comment, set_edit_modal_input_comment) = create_signal("".to_string());
+    let (edit_modal_input_active, set_edit_modal_input_active) = create_signal(true);
     let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
 
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
@@ -281,6 +286,8 @@ pub fn Aliases(user: User) -> impl IntoView {
             }
             set_edit_modal_input_target(edit_alias.target.clone());
             set_edit_modal_input_comment(edit_alias.comment.clone());
+            set_edit_modal_input_active(edit_alias.active);
+            set_edit_modal_input_owner(edit_alias.owner.clone());
         } else {
             // Only set the input domain if the current one is not in the list
             // of allowed domains. This allows users to keep the old value
@@ -293,6 +300,8 @@ pub fn Aliases(user: User) -> impl IntoView {
             // TODO set from user
             //set_edit_modal_input_target("".to_string());
             set_edit_modal_input_comment("".to_string());
+            set_edit_modal_input_active(true);
+            set_edit_modal_input_owner("".to_string());
         }
     });
 
@@ -304,6 +313,7 @@ pub fn Aliases(user: User) -> impl IntoView {
                 edit_modal_input_domain.get_untracked(),
                 edit_modal_input_target.get_untracked(),
                 edit_modal_input_comment.get_untracked(),
+                edit_modal_input_active.get_untracked(),
                 edit_modal_input_owner.get_untracked(),
             )
             .await
@@ -321,6 +331,7 @@ pub fn Aliases(user: User) -> impl IntoView {
             if let Err(e) = update_alias_active(ev.changed_row.address.clone(), ev.changed_row.active).await {
                 error!("Failed to update active status of {}: {}", ev.changed_row.address, e);
             }
+            reload_controller.reload();
         });
     };
 
@@ -457,13 +468,13 @@ pub fn Aliases(user: User) -> impl IntoView {
                 </div>
                 <div class="flex flex-col gap-2">
                     <label
-                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mt-3 sm:mt-0"
                         for="domain"
                     >
                         Domain
                     </label>
                     <Select
-                        class="w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                        class="w-full h-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
                         choices=allowed_domains
                         value=edit_modal_input_domain
                         set_value=set_edit_modal_input_domain
@@ -502,7 +513,6 @@ pub fn Aliases(user: User) -> impl IntoView {
                     prop:value=edit_modal_input_comment
                 />
             </div>
-            // TODO: active
             <div class="flex flex-col gap-2">
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -518,6 +528,21 @@ pub fn Aliases(user: User) -> impl IntoView {
                     prop:value=edit_modal_input_owner
                     disabled=move || !user.admin
                 />
+            </div>
+            <div class="flex flex-row gap-2 mt-2 items-center">
+                <input
+                    id="alias_active"
+                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    type="checkbox"
+                    on:change=move |ev| set_edit_modal_input_active(event_target_checked(&ev))
+                    prop:checked=edit_modal_input_active
+                />
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="alias_active"
+                >
+                    Active
+                </label>
             </div>
         </EditModal>
     }
