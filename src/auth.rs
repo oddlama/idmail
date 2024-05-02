@@ -140,78 +140,84 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
     view! {
         <div class="relative flex min-h-screen flex-col bg-background">
             <div class="w-full h-screen flex items-center justify-center px-4">
-                <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground mx-auto max-w-sm">
-                    <div class="flex flex-col space-y-1.5 p-6">
-                        <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
-                        <p class="text-sm text-gray-500">"Enter your mailbox address and password below to login"</p>
+                <div class="flex flex-col mx-auto">
+                    <div class="mx-auto mb-4 flex flex-row">
+                        <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">idmail</h2>
+                        <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
                     </div>
-                    <div class="p-6 pt-0">
-                        <div class="grid gap-4">
-                            <div class="grid gap-2">
-                                <label
-                                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    for="username"
-                                >
-                                    Email
-                                </label>
-                                <input
-                                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    type="text"
-                                    name="username"
-                                    placeholder="username@example.com"
-                                    required="required"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <div class="flex items-center">
+                    <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground max-w-sm">
+                        <div class="flex flex-col space-y-1.5 p-6">
+                            <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
+                            <p class="text-sm text-gray-500">"Enter your mailbox address and password below to login"</p>
+                        </div>
+                        <div class="p-6 pt-0">
+                            <div class="grid gap-4">
+                                <div class="grid gap-2">
                                     <label
                                         class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        for="password"
+                                        for="username"
                                     >
-                                        Password
+                                        Email
                                     </label>
+                                    <input
+                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        type="text"
+                                        name="username"
+                                        placeholder="username@example.com"
+                                        required="required"
+                                    />
                                 </div>
-                                <input
-                                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    type="password"
-                                    name="password"
-                                    required="required"
-                                />
-                            </div>
-                            <ErrorBoundary fallback=|errors| {
-                                view! {
-                                    <div class="rounded-lg p-4 flex bg-red-100">
-                                        <div>
-                                            <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
-                                        </div>
-                                        <div class="ml-3 text-red-700">
-                                            <p>
-                                                {move || {
-                                                    errors
-                                                        .get()
-                                                        .into_iter()
-                                                        .map(|(_, e)| view! { {e.to_string()} })
-                                                        .collect_view()
-                                                }}
-
-                                            </p>
-                                        </div>
+                                <div class="grid gap-2">
+                                    <div class="flex items-center">
+                                        <label
+                                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            for="password"
+                                        >
+                                            Password
+                                        </label>
                                     </div>
-                                }
-                            }>
+                                    <input
+                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        type="password"
+                                        name="password"
+                                        required="required"
+                                    />
+                                </div>
+                                <ErrorBoundary fallback=|errors| {
+                                    view! {
+                                        <div class="rounded-lg p-4 flex bg-red-100">
+                                            <div>
+                                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
+                                            </div>
+                                            <div class="ml-3 text-red-700">
+                                                <p>
+                                                    {move || {
+                                                        errors
+                                                            .get()
+                                                            .into_iter()
+                                                            .map(|(_, e)| view! { {e.to_string()} })
+                                                            .collect_view()
+                                                    }}
 
-                                {action_value}
-                            </ErrorBoundary>
-                            <button
-                                type="submit"
-                                tabindex="0"
-                                class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
-                            >
-                                Login
-                            </button>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    }
+                                }>
+
+                                    {action_value}
+                                </ErrorBoundary>
+                                <button
+                                    type="submit"
+                                    tabindex="0"
+                                    class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
+                                >
+                                    Login
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </ActionForm>
+                    </ActionForm>
+                </div>
             </div>
         </div>
     }
