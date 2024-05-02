@@ -142,13 +142,17 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
             <div class="w-full h-screen flex items-center justify-center px-4">
                 <div class="flex flex-col mx-auto">
                     <div class="mx-auto mb-4 flex flex-row">
-                        <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">idmail</h2>
+                        <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
+                            idmail
+                        </h2>
                         <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
                     </div>
                     <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground max-w-sm">
                         <div class="flex flex-col space-y-1.5 p-6">
                             <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
-                            <p class="text-sm text-gray-500">"Enter your mailbox address and password below to login"</p>
+                            <p class="text-sm text-gray-500">
+                                "Enter your mailbox address and password below to login"
+                            </p>
                         </div>
                         <div class="p-6 pt-0">
                             <div class="grid gap-4">

@@ -371,61 +371,56 @@ pub fn Aliases(user: User) -> impl IntoView {
     };
 
     view! {
-        <div class="overflow-hidden bg-background">
-            <div class="h-full flex-1 flex-col space-y-12 p-4 md:p-12">
-                <div class="flex items-center justify-between space-y-2">
-                    <div>
-                        <h2 class="text-4xl font-bold">Aliases</h2>
-                        <p class="text-xl text-muted-foreground">coolmailbox@somemail.com</p>
+        <div class="h-full flex-1 flex-col mt-12">
+            <div class="flex items-center justify-between space-y-2 mb-4">
+                <h2 class="text-4xl font-bold">Aliases</h2>
+            </div>
+            <div class="space-y-4">
+                <div class="flex flex-wrap items-center justify-between">
+                    <input
+                        class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        type="search"
+                        placeholder="Search"
+                        value=rows.search
+                        on:input=move |e| {
+                            on_input(event_target_value(&e));
+                        }
+                    />
+
+                    <button
+                        type="button"
+                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                        on:click=move |_| edit_modal_open_with(None)
+                    >
+                        <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
+                        "New"
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
+                    >
+                        <Icon icon=icondata::FaDiceSolid class="w-6 h-6 me-2"/>
+                        "New Random"
+                    </button>
+                    <div class="flex flex-1"></div>
+                    <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-right px-4">
+                        {count} " results"
                     </div>
                 </div>
-                <div class="space-y-4">
-                    <div class="flex flex-wrap items-center justify-between">
-                        <input
-                            class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            type="search"
-                            placeholder="Search"
-                            value=rows.search
-                            on:input=move |e| {
-                                on_input(event_target_value(&e));
-                            }
-                        />
 
-                        <button
-                            type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
-                            on:click=move |_| edit_modal_open_with(None)
-                        >
-                            <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
-                            "New"
-                        </button>
-                        <button
-                            type="button"
-                            class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
-                        >
-                            <Icon icon=icondata::FaDiceSolid class="w-6 h-6 me-2"/>
-                            "New Random"
-                        </button>
-                        <div class="flex flex-1"></div>
-                        <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-right px-4">
-                            {count} " results"
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border-[1.5px] text-base flex flex-col overflow-hidden">
-                        <div class="overflow-auto grow min-h-0">
-                            <table class="table-auto text-left w-full">
-                                <TableContent
-                                    rows
-                                    sorting=sorting
-                                    row_renderer=alias_row_renderer
-                                    reload_controller=reload_controller
-                                    loading_row_display_limit=0
-                                    on_row_count=set_count
-                                    on_change=on_row_change
-                                />
-                            </table>
-                        </div>
+                <div class="rounded-lg border-[1.5px] text-base flex flex-col overflow-hidden">
+                    <div class="overflow-auto grow min-h-0">
+                        <table class="table-auto text-left w-full">
+                            <TableContent
+                                rows
+                                sorting=sorting
+                                row_renderer=alias_row_renderer
+                                reload_controller=reload_controller
+                                loading_row_display_limit=0
+                                on_row_count=set_count
+                                on_change=on_row_change
+                            />
+                        </table>
                     </div>
                 </div>
             </div>
