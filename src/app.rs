@@ -62,16 +62,18 @@ pub fn Main() -> impl IntoView {
                         Ok(None) => view! { <Login action=login/> }.into_view(),
                         Ok(Some(user)) => {
                             view! {
-                                <div class="flex flex-row items-center py-4 px-4 md:px-12">
-                                    <div class="flex-1 flex flex-row">
-                                        <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
-                                            idmail
-                                        </h2>
-                                        <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
-                                        <div class="flex flex-row items-center gap-4 ml-12">
+                                <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
+                                    <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
+                                        <div class="flex flex-row items-center mb-4 sm:mb-0">
+                                            <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
+                                                idmail
+                                            </h2>
+                                            <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
+                                        </div>
+                                        <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
                                             <button
                                                 type="button"
-                                                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
+                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
                                                 class=("bg-indigo-100", move || tab.get() == Tab::Aliases)
                                                 class=("text-indigo-700", move || tab.get() == Tab::Aliases)
                                                 on:click=move |_| {
@@ -83,7 +85,7 @@ pub fn Main() -> impl IntoView {
                                             </button>
                                             <button
                                                 type="button"
-                                                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
+                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
                                                 class=("bg-indigo-100", move || tab.get() == Tab::Mailboxes)
                                                 class=("text-indigo-700", move || tab.get() == Tab::Mailboxes)
                                                 on:click=move |_| {
@@ -95,7 +97,7 @@ pub fn Main() -> impl IntoView {
                                             </button>
                                             <button
                                                 type="button"
-                                                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
+                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
                                                 class=("bg-indigo-100", move || tab.get() == Tab::Domains)
                                                 class=("text-indigo-700", move || tab.get() == Tab::Domains)
                                                 on:click=move |_| {
@@ -107,11 +109,14 @@ pub fn Main() -> impl IntoView {
                                             </button>
                                         </div>
                                     </div>
-                                    <span class="text-base mr-4">{user.username.clone()}</span>
-                                    <Logout action=logout/>
+                                    <div class="flex flex-row items-center w-full sm:w-auto">
+                                        <div class="flex-1 sm:flex-none"></div>
+                                        <span class="text-base mr-4">{user.username.clone()}</span>
+                                        <Logout action=logout/>
+                                    </div>
                                 </div>
                                 <div class="overflow-hidden bg-background px-4 md:px-12">
-                                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-4">
+                                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                         <div class="rounded-xl border-[1.5px]">
                                             <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
                                                 <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
