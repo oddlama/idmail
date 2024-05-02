@@ -8,6 +8,7 @@ pub mod error_template;
 pub mod fileserv;
 #[cfg(feature = "ssr")]
 pub mod state;
+pub mod users;
 pub mod utils;
 
 #[cfg(feature = "hydrate")]

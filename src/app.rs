@@ -2,6 +2,7 @@ use crate::{
     aliases::Aliases,
     auth::{get_user, Login, Logout},
     domains::Domains,
+    users::Users,
 };
 use leptos::*;
 use leptos_icons::Icon;
@@ -39,6 +40,7 @@ pub fn Main() -> impl IntoView {
         Aliases,
         Mailboxes,
         Domains,
+        Users,
     }
 
     let tab = create_rw_signal(Tab::Aliases);
@@ -107,6 +109,20 @@ pub fn Main() -> impl IntoView {
 
                                                 "Domains"
                                             </button>
+                                            <Show when=move || user.admin>
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
+                                                    class=("bg-indigo-100", move || tab.get() == Tab::Users)
+                                                    class=("text-indigo-700", move || tab.get() == Tab::Users)
+                                                    on:click=move |_| {
+                                                        tab.set(Tab::Users);
+                                                    }
+                                                >
+
+                                                    "Users"
+                                                </button>
+                                            </Show>
                                         </div>
                                     </div>
                                     <div class="flex flex-row items-center w-full sm:w-auto">
@@ -163,6 +179,7 @@ pub fn Main() -> impl IntoView {
                                             Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
                                             Tab::Mailboxes => view! {}.into_view(),
                                             Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
+                                            Tab::Users => view! { <Users/> }.into_view(),
                                         }
                                     }}
 

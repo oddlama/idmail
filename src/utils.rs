@@ -240,6 +240,7 @@ pub fn SelectOption(
 #[component]
 pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
     #[prop(into)] data: RwSignal<Option<Option<T>>>,
+    #[prop(into)] errors: Signal<Vec<String>>,
     what: String,
     get_title: F,
     #[prop(into)] on_confirm: Callback<Option<T>>,
@@ -269,7 +270,18 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
 
                 </h3>
                 <div class="flex flex-col gap-3">
-                    {children()} <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
+                    {children()} <Show when=move || !errors.get().is_empty()>
+                        <div class="rounded-lg p-4 flex bg-red-100 mt-2">
+                            <div>
+                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
+                            </div>
+                            <div class="ml-3 text-red-700">
+                                <For each=errors key=|x| x.clone() let:child>
+                                    <p>{child.clone()}</p>
+                                </For>
+                            </div>
+                        </div>
+                    </Show> <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
                         <button
                             type="button"
                             class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
@@ -282,12 +294,12 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
                         </button>
                         <button
                             type="button"
-                            disabled=modal_waiting
-                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
-                            class=("!bg-blue-500", modal_waiting)
+                            disabled=move || (modal_waiting() || !errors.get().is_empty())
+                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                            class=("!bg-blue-500", move || (modal_waiting() || !errors.get().is_empty()))
                             on:click=move |_ev| {
                                 if let Some(data) = data.get() {
-                                    if !modal_waiting() {
+                                    if !modal_waiting() && errors.get().is_empty() {
                                         on_confirm(data);
                                         set_modal_waiting(true);
                                     }

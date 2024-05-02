@@ -9,7 +9,7 @@ pub struct User {
     /// The username / mailbox address
     pub username: String,
     /// The associated password hash
-    pub password: String,
+    pub password_hash: String,
     /// Whether the user is a mailbox
     pub mailbox: bool,
     /// Whether the user is an admin
@@ -32,9 +32,9 @@ pub mod ssr {
     impl User {
         pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
             let user = sqlx::query_as::<_, User>(
-                "SELECT username, password, FALSE AS mailbox, admin, active \
+                "SELECT username, password_hash, FALSE AS mailbox, admin, active \
                 FROM users WHERE username = $1 \
-                UNION SELECT address AS username, password, TRUE AS mailbox, FALSE AS admin, active \
+                UNION SELECT address AS username, password_hash, TRUE AS mailbox, FALSE AS admin, active \
                 FROM mailboxes WHERE address = $1",
             )
             .bind(username)

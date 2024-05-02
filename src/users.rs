@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::auth::User;
 use crate::utils::{DeleteModal, EditModal};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
@@ -17,22 +16,20 @@ use sqlx::QueryBuilder;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TableRow)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 #[table(sortable, classes_provider = TailwindClassesPreset, thead_cell_renderer = THeadCellRenderer)]
-pub struct Domain {
-    #[table(class = "w-40")]
-    pub domain: String,
-    pub catch_all: Option<String>,
+pub struct User {
+    pub username: String,
+    #[table(skip)]
+    pub password_hash: String,
     #[table(class = "w-1", renderer = "SliderRenderer")]
-    pub public: bool,
+    pub admin: bool,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
-    #[table(class = "w-1")]
-    pub owner: String,
     #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DomainQuery {
+pub struct UserQuery {
     #[serde(default)]
     sort: VecDeque<(usize, ColumnSort)>,
     range: Range<usize>,
@@ -40,43 +37,18 @@ pub struct DomainQuery {
 }
 
 #[server]
-pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+pub async fn list_users(query: UserQuery) -> Result<Vec<User>, ServerFnError> {
+    let _user = crate::auth::auth_admin().await?;
+    let UserQuery { sort, range, search } = query;
 
-    let mut query = QueryBuilder::new("SELECT domain FROM domains");
-    query.push(" WHERE public = TRUE OR owner = ");
-    query.push_bind(&user.username);
-
-    let pool = crate::database::ssr::pool()?;
-    Ok(query.build_query_scalar::<String>().fetch_all(&pool).await?)
-}
-
-#[server]
-pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
-
-    let DomainQuery { sort, range, search } = query;
-
-    let mut query = QueryBuilder::new("SELECT * FROM domains WHERE 1=1");
-    if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
-    }
+    let mut query = QueryBuilder::new("SELECT * FROM users");
     if !search.is_empty() {
-        query.push(" AND ( domain LIKE concat('%', ");
-        query.push_bind(&search);
-        query.push(", '%') OR catch_all LIKE concat('%', ");
-        query.push_bind(&search);
-        query.push(", '%') OR owner LIKE concat('%', ");
+        query.push(" WHERE username LIKE concat('%', ");
         query.push_bind(&search);
         query.push(", '%') )");
     }
 
-    if let Some(order) = Domain::sorting_to_sql(&sort) {
+    if let Some(order) = User::sorting_to_sql(&sort) {
         query.push(" ");
         query.push(order);
     }
@@ -87,20 +59,13 @@ pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnErr
     query.push_bind(range.start as i64);
 
     let pool = crate::database::ssr::pool()?;
-    Ok(query.build_query_as::<Domain>().fetch_all(&pool).await?)
+    Ok(query.build_query_as::<User>().fetch_all(&pool).await?)
 }
 
 #[server]
-pub async fn domain_count() -> Result<usize, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
-
-    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM domains");
-    if !user.admin {
-        query.push(" WHERE owner = ");
-        query.push_bind(&user.username);
-    }
+pub async fn user_count() -> Result<usize, ServerFnError> {
+    let _user = crate::auth::auth_admin().await?;
+    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM users");
 
     let pool = crate::database::ssr::pool()?;
     let count = query.build_query_scalar::<i64>().fetch_one(&pool).await?;
@@ -109,19 +74,10 @@ pub async fn domain_count() -> Result<usize, ServerFnError> {
 }
 
 #[server]
-pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
-
-    let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
-    query.push_bind(domain);
-
-    // Non-admins can only delete their own domains
-    if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
-    }
+pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
+    let _user = crate::auth::auth_admin().await?;
+    let mut query = QueryBuilder::new("DELETE FROM users WHERE username = ");
+    query.push_bind(username);
 
     let pool = crate::database::ssr::pool()?;
     query.build().execute(&pool).await.map(|_| ())?;
@@ -129,54 +85,34 @@ pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
 }
 
 #[server]
-pub async fn create_or_update_domain(
-    old_domain: Option<String>,
-    domain: String,
-    catch_all: String,
-    public: bool,
+pub async fn create_or_update_user(
+    username: Option<String>,
+    password_hash: String,
+    admin: bool,
     active: bool,
-    owner: String,
 ) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let _user = crate::auth::auth_admin().await?;
     let pool = crate::database::ssr::pool()?;
-
-    // Only admins can assign other owners
-    let owner = if user.admin { owner.trim() } else { &user.username };
-    // Empty owner -> self owned
-    let owner = if owner.is_empty() { &user.username } else { owner };
-    // Only admins may create public domains
-    let public = public && user.admin;
     // TODO: FIXME: duplicate detect
     // TODO: FIXME: invalid detect (empty, @@, ...)
 
-    if let Some(old_domain) = old_domain {
-        let mut query = QueryBuilder::new("UPDATE domains SET domain = ");
-        query.push_bind(domain);
-        query.push(", catch_all = ");
-        query.push_bind(catch_all);
-        query.push(", public = ");
-        query.push_bind(public);
+    if let Some(username) = username {
+        let mut query = QueryBuilder::new("UPDATE users SET password_hash = ");
+        query.push_bind(password_hash);
+        query.push(", admin = ");
+        query.push_bind(admin);
         query.push(", active = ");
         query.push_bind(active);
-        query.push(", owner = ");
-        query.push_bind(owner);
-        query.push(" WHERE domain = ");
-        query.push_bind(old_domain);
-        if !user.admin {
-            query.push(" AND owner = ?");
-            query.push_bind(&user.username);
-        }
+        query.push(" WHERE username = ");
+        query.push_bind(username);
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO domains (domain, catch_all, public, active, owner) VALUES (?, ?, ?, ?, ?)")
-            .bind(domain)
-            .bind(catch_all)
+        sqlx::query("INSERT INTO users (username, password_hash, admin, active) VALUES (?, ?, ?, ?)")
+            .bind(username)
+            .bind(password_hash)
+            .bind(admin)
             .bind(active)
-            .bind(public)
-            .bind(owner)
             .execute(&pool)
             .await
             .map(|_| ())?;
@@ -186,26 +122,14 @@ pub async fn create_or_update_domain(
 }
 
 #[server]
-pub async fn update_domain_public_and_active(domain: String, public: bool, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
-
-    // Only admins may create public domains
-    let public = public && user.admin;
-
-    let mut query = QueryBuilder::new("UPDATE domains SET public = ");
-    query.push_bind(public);
+pub async fn update_user_admin_or_active(username: String, admin: bool, active: bool) -> Result<(), ServerFnError> {
+    let _user = crate::auth::auth_admin().await?;
+    let mut query = QueryBuilder::new("UPDATE users SET admin = ");
+    query.push_bind(admin);
     query.push(", active = ");
     query.push_bind(active);
-    query.push(" WHERE domain = ");
-    query.push_bind(domain);
-
-    // Non-admins can only change their own domains
-    if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
-    }
+    query.push(" WHERE username = ");
+    query.push_bind(username);
 
     let pool = crate::database::ssr::pool()?;
     query.build().execute(&pool).await.map(|_| ())?;
@@ -213,14 +137,14 @@ pub async fn update_domain_public_and_active(domain: String, public: bool, activ
 }
 
 #[derive(Default)]
-pub struct DomainTableDataProvider {
+pub struct UserTableDataProvider {
     sort: VecDeque<(usize, ColumnSort)>,
     pub search: RwSignal<String>,
 }
 
-impl TableDataProvider<Domain> for DomainTableDataProvider {
-    async fn get_rows(&self, range: Range<usize>) -> Result<(Vec<Domain>, Range<usize>), String> {
-        list_domains(DomainQuery {
+impl TableDataProvider<User> for UserTableDataProvider {
+    async fn get_rows(&self, range: Range<usize>) -> Result<(Vec<User>, Range<usize>), String> {
+        list_users(UserQuery {
             search: self.search.get_untracked().trim().to_string(),
             sort: self.sort.clone(),
             range: range.clone(),
@@ -234,7 +158,7 @@ impl TableDataProvider<Domain> for DomainTableDataProvider {
     }
 
     async fn row_count(&self) -> Option<usize> {
-        domain_count().await.ok()
+        user_count().await.ok()
     }
 
     fn set_sorting(&mut self, sorting: &VecDeque<(usize, ColumnSort)>) {
@@ -247,9 +171,9 @@ impl TableDataProvider<Domain> for DomainTableDataProvider {
 }
 
 #[component]
-pub fn Domains(user: User) -> impl IntoView {
-    let mut rows = DomainTableDataProvider::default();
-    let default_sorting = VecDeque::from([(5, ColumnSort::Descending)]);
+pub fn Users() -> impl IntoView {
+    let mut rows = UserTableDataProvider::default();
+    let default_sorting = VecDeque::from([(2, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
     let sorting = create_rw_signal(default_sorting);
 
@@ -257,43 +181,45 @@ pub fn Domains(user: User) -> impl IntoView {
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
-    let delete_modal_domain = create_rw_signal(None);
-    let edit_modal_domain = create_rw_signal(None);
+    let delete_modal_user = create_rw_signal(None);
+    let edit_modal_user = create_rw_signal(None);
 
-    let (edit_modal_input_domain, set_edit_modal_input_domain) = create_signal("".to_string());
-    let (edit_modal_input_catchall, set_edit_modal_input_catchall) = create_signal("".to_string());
-    let (edit_modal_input_public, set_edit_modal_input_public) = create_signal(true);
+    let (edit_modal_input_username, set_edit_modal_input_username) = create_signal("".to_string());
+    let (edit_modal_input_password, set_edit_modal_input_password) = create_signal("".to_string());
+    let (edit_modal_input_password_repeat, set_edit_modal_input_password_repeat) = create_signal("".to_string());
+    let (edit_modal_input_admin, set_edit_modal_input_admin) = create_signal(false);
     let (edit_modal_input_active, set_edit_modal_input_active) = create_signal(true);
-    let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
-    let edit_modal_open_with = Callback::new(move |edit_domain: Option<Domain>| {
-        edit_modal_domain.set(Some(edit_domain.clone()));
+    let edit_modal_open_with = Callback::new(move |edit_user: Option<User>| {
+        edit_modal_user.set(Some(edit_user.clone()));
+        set_edit_modal_input_password("".to_string());
+        set_edit_modal_input_password_repeat("".to_string());
 
-        if let Some(edit_domain) = edit_domain {
-            set_edit_modal_input_domain(edit_domain.domain.clone());
-            set_edit_modal_input_catchall(edit_domain.catch_all.unwrap_or("".to_string()).clone());
-            set_edit_modal_input_public(edit_domain.public);
-            set_edit_modal_input_active(edit_domain.active);
-            set_edit_modal_input_owner(edit_domain.owner.clone());
+        if let Some(edit_user) = edit_user {
+            set_edit_modal_input_username(edit_user.username.clone());
+            set_edit_modal_input_admin(edit_user.admin);
+            set_edit_modal_input_active(edit_user.active);
         } else {
-            set_edit_modal_input_domain("".to_string());
-            set_edit_modal_input_catchall("".to_string());
-            set_edit_modal_input_public(true);
+            set_edit_modal_input_username("".to_string());
+            set_edit_modal_input_admin(false);
             set_edit_modal_input_active(true);
-            set_edit_modal_input_owner("".to_string());
         }
     });
 
-    let errors = move || { Vec::new() };
-
-    let on_edit = move |data: Option<Domain>| {
+    let on_edit = move |data: Option<User>| {
         spawn_local(async move {
-            if let Err(e) = create_or_update_domain(
-                data.map(|x| x.domain),
-                edit_modal_input_domain.get_untracked(),
-                edit_modal_input_catchall.get_untracked(),
-                edit_modal_input_public.get_untracked(),
+            let pw = edit_modal_input_password.get_untracked();
+            let pw_repeat = edit_modal_input_password_repeat.get_untracked();
+            if pw != pw_repeat {
+                error!("Failed to create/update: passwords don't match");
+                return;
+            }
+
+            let password_hash = pw; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            if let Err(e) = create_or_update_user(
+                data.map(|x| x.username),
+                password_hash,
+                edit_modal_input_admin.get_untracked(),
                 edit_modal_input_active.get_untracked(),
-                edit_modal_input_owner.get_untracked(),
             )
             .await
             {
@@ -301,22 +227,22 @@ pub fn Domains(user: User) -> impl IntoView {
             } else {
                 reload_controller.reload();
             }
-            edit_modal_domain.set(None);
+            edit_modal_user.set(None);
         });
     };
 
-    let on_row_change = move |ev: ChangeEvent<Domain>| {
+    let on_row_change = move |ev: ChangeEvent<User>| {
         spawn_local(async move {
-            if let Err(e) = update_domain_public_and_active(
-                ev.changed_row.domain.clone(),
-                ev.changed_row.public,
+            if let Err(e) = update_user_admin_or_active(
+                ev.changed_row.username.clone(),
+                ev.changed_row.admin,
                 ev.changed_row.active,
             )
             .await
             {
                 error!(
-                    "Failed to update public or active status of {}: {}",
-                    ev.changed_row.domain, e
+                    "Failed to update admin/active status of {}: {}",
+                    ev.changed_row.username, e
                 );
             }
             reload_controller.reload();
@@ -324,14 +250,14 @@ pub fn Domains(user: User) -> impl IntoView {
     };
 
     #[allow(unused_variables, non_snake_case)]
-    let domain_row_renderer = move |class: Signal<String>,
-                                    row: Domain,
-                                    index: usize,
-                                    selected: Signal<bool>,
-                                    on_select: EventHandler<MouseEvent>,
-                                    on_change: EventHandler<ChangeEvent<Domain>>| {
-        let delete_domain = row.domain.clone();
-        let edit_domain = row.clone();
+    let user_row_renderer = move |class: Signal<String>,
+                                  row: User,
+                                  index: usize,
+                                  selected: Signal<bool>,
+                                  on_select: EventHandler<MouseEvent>,
+                                  on_change: EventHandler<ChangeEvent<User>>| {
+        let delete_username = row.username.clone();
+        let edit_user = row.clone();
         view! {
             <tr class=class on:click=move |mouse_event| on_select.run(mouse_event)>
                 {row.render_row(index, on_change)}
@@ -339,14 +265,14 @@ pub fn Domains(user: User) -> impl IntoView {
                     <div class="inline-flex items-center rounded-md">
                         <button
                             class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
-                            on:click=move |_| edit_modal_open_with(Some(edit_domain.clone()))
+                            on:click=move |_| edit_modal_open_with(Some(edit_user.clone()))
                         >
                             <Icon icon=icondata::FiEdit class="w-5 h-5"/>
                         </button>
                         <button
                             class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| {
-                                delete_modal_domain.set(Some(delete_domain.clone()));
+                                delete_modal_user.set(Some(delete_username.clone()));
                             }
                         >
 
@@ -358,10 +284,23 @@ pub fn Domains(user: User) -> impl IntoView {
         }
     };
 
+    let has_password_mismatch = move || edit_modal_input_password() != edit_modal_input_password_repeat();
+    let has_invalid_password = move || !(16..=1024).contains(&edit_modal_input_password().len());
+    let errors = create_memo(move |_| {
+        let mut errors = Vec::new();
+        if has_password_mismatch() {
+            errors.push("Passwords don't match".to_string());
+        }
+        if has_invalid_password() {
+            errors.push("Password must be between 16 and 512 characters".to_string());
+        }
+        errors
+    });
+
     view! {
         <div class="h-full flex-1 flex-col mt-12">
             <div class="flex items-center justify-between space-y-2 mb-4">
-                <h2 class="text-4xl font-bold">Domains</h2>
+                <h2 class="text-4xl font-bold">Users</h2>
             </div>
             <div class="space-y-4">
                 <div class="flex flex-wrap items-center justify-between">
@@ -395,7 +334,7 @@ pub fn Domains(user: User) -> impl IntoView {
                             <TableContent
                                 rows
                                 sorting=sorting
-                                row_renderer=domain_row_renderer
+                                row_renderer=user_row_renderer
                                 reload_controller=reload_controller
                                 loading_row_display_limit=0
                                 on_row_count=set_count
@@ -408,91 +347,98 @@ pub fn Domains(user: User) -> impl IntoView {
         </div>
 
         <DeleteModal
-            data=delete_modal_domain
-            text="Are you sure you want to delete this domain? This action cannot be undone.".into_view()
+            data=delete_modal_user
+            text="Are you sure you want to delete this user? This action cannot be undone.".into_view()
             on_confirm=move |data| {
                 spawn_local(async move {
-                    if let Err(e) = delete_domain(data).await {
-                        error!("Failed to delete domain: {}", e);
+                    if let Err(e) = delete_user(data).await {
+                        error!("Failed to delete user: {}", e);
                     } else {
                         reload_controller.reload();
                     }
-                    delete_modal_domain.set(None);
+                    delete_modal_user.set(None);
                 });
             }
         />
 
         <EditModal
-            data=edit_modal_domain
-            what="Domain".to_string()
-            get_title=move |x| { &x.domain }
+            data=edit_modal_user
+            what="User".to_string()
+            get_title=move |x| { &x.username }
             on_confirm=on_edit
             errors
         >
             <div class="flex flex-col gap-2">
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="domain"
+                    for="username"
                 >
-                    Domain
+                    Username
                 </label>
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
-                    placeholder="example.com"
-                    on:input=move |ev| set_edit_modal_input_domain(event_target_value(&ev))
-                    prop:value=edit_modal_input_domain
+                    placeholder="username"
+                    required="required"
+                    on:input=move |ev| set_edit_modal_input_username(event_target_value(&ev))
+                    prop:value=edit_modal_input_username
+                    disabled=move || !matches!(edit_modal_user.get(), Some(None))
                 />
             </div>
             <div class="flex flex-col gap-2">
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="catchall"
+                    for="password"
                 >
-                    Catch All
+                    Password
                 </label>
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    type="text"
-                    placeholder="catch-all@example.com"
-                    on:input=move |ev| set_edit_modal_input_catchall(event_target_value(&ev))
-                    prop:value=edit_modal_input_catchall
+                    class=("!ring-4", has_invalid_password)
+                    class=("!ring-red-500", has_invalid_password)
+                    type="password"
+                    required="required"
+                    maxlength="1024"
+                    on:input=move |ev| set_edit_modal_input_password(event_target_value(&ev))
+                    prop:value=edit_modal_input_password
                 />
             </div>
             <div class="flex flex-col gap-2">
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="owner"
+                    for="password_2"
                 >
-                    Owner
+                    Repeat Password
                 </label>
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    type="text"
-                    placeholder="admin"
-                    on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
-                    prop:value=edit_modal_input_owner
-                    disabled=move || !user.admin
+                    class=("!ring-4", has_password_mismatch)
+                    class=("!ring-red-500", has_password_mismatch)
+                    type="password"
+                    required="required"
+                    maxlength="1024"
+                    on:input=move |ev| set_edit_modal_input_password_repeat(event_target_value(&ev))
+                    prop:value=edit_modal_input_password_repeat
                 />
             </div>
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
-                    id="public"
+                    id="users_admin"
                     class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
                     type="checkbox"
-                    on:change=move |ev| set_edit_modal_input_public(event_target_checked(&ev))
-                    prop:checked=edit_modal_input_public
+                    on:change=move |ev| set_edit_modal_input_admin(event_target_checked(&ev))
+                    prop:checked=edit_modal_input_admin
                 />
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="public"
+                    for="users_admin"
                 >
-                    Public
+                    Admin
                 </label>
             </div>
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
-                    id="domains_active"
+                    id="users_active"
                     class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
                     type="checkbox"
                     on:change=move |ev| set_edit_modal_input_active(event_target_checked(&ev))
@@ -500,7 +446,7 @@ pub fn Domains(user: User) -> impl IntoView {
                 />
                 <label
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="domains_active"
+                    for="users_active"
                 >
                     Active
                 </label>

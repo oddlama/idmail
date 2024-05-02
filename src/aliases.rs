@@ -305,6 +305,8 @@ pub fn Aliases(user: User) -> impl IntoView {
         }
     });
 
+    let errors = move || { Vec::new() };
+
     let on_edit = move |data: Option<Alias>| {
         spawn_local(async move {
             if let Err(e) = create_or_update_alias(
@@ -441,7 +443,13 @@ pub fn Aliases(user: User) -> impl IntoView {
             }
         />
 
-        <EditModal data=edit_modal_alias what="Alias".to_string() get_title=move |x| { &x.address } on_confirm=on_edit>
+        <EditModal
+            data=edit_modal_alias
+            what="Alias".to_string()
+            get_title=move |x| { &x.address }
+            on_confirm=on_edit
+            errors
+        >
             <div class="flex flex-col sm:flex-row">
                 <div class="flex flex-1 flex-col gap-2">
                     <label
