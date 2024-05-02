@@ -25,7 +25,7 @@ pub struct Domain {
     pub public: bool,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
-    #[table(class = "w-40")]
+    #[table(class = "w-1")]
     pub owner: String,
     #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,

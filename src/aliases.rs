@@ -30,7 +30,7 @@ pub struct Alias {
     pub n_sent: i64,
     #[table(class = "w-1", renderer = "SliderRenderer")]
     pub active: bool,
-    #[table(class = "w-40")]
+    #[table(class = "w-1")]
     pub owner: String,
     #[table(class = "w-1", title = "Created", renderer = "TimediffRenderer")]
     pub created_at: DateTime<Utc>,
@@ -397,14 +397,14 @@ pub fn Aliases(user: User) -> impl IntoView {
                             on:click=move |_| edit_modal_open_with(None)
                         >
                             <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
-                            New
+                            "New"
                         </button>
                         <button
                             type="button"
                             class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
                         >
                             <Icon icon=icondata::FaDiceSolid class="w-6 h-6 me-2"/>
-                            New Random
+                            "New Random"
                         </button>
                         <div class="flex flex-1"></div>
                         <div class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-right px-4">
