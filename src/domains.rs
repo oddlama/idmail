@@ -285,7 +285,7 @@ pub fn Domains(user: User) -> impl IntoView {
 
     let errors = move || { Vec::new() };
 
-    let on_edit = move |data: Option<Domain>| {
+    let on_edit = move |(data, on_error): (Option<Domain>, Callback<String>)| {
         spawn_local(async move {
             if let Err(e) = create_or_update_domain(
                 data.map(|x| x.domain),
@@ -297,11 +297,11 @@ pub fn Domains(user: User) -> impl IntoView {
             )
             .await
             {
-                error!("Failed to create/update: {}", e);
+                on_error(e.to_string())
             } else {
                 reload_controller.reload();
+                edit_modal_domain.set(None);
             }
-            edit_modal_domain.set(None);
         });
     };
 

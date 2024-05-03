@@ -307,7 +307,7 @@ pub fn Aliases(user: User) -> impl IntoView {
 
     let errors = move || { Vec::new() };
 
-    let on_edit = move |data: Option<Alias>| {
+    let on_edit = move |(data, on_error): (Option<Alias>, Callback<String>)| {
         spawn_local(async move {
             if let Err(e) = create_or_update_alias(
                 data.map(|x| x.address),
@@ -320,11 +320,11 @@ pub fn Aliases(user: User) -> impl IntoView {
             )
             .await
             {
-                error!("Failed to create/update: {}", e);
+                on_error(e.to_string())
             } else {
                 reload_controller.reload();
+                edit_modal_alias.set(None);
             }
-            edit_modal_alias.set(None);
         });
     };
 

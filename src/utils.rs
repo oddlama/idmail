@@ -243,16 +243,23 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
     #[prop(into)] errors: Signal<Vec<String>>,
     what: String,
     get_title: F,
-    #[prop(into)] on_confirm: Callback<Option<T>>,
+    #[prop(into)] on_confirm: Callback<(Option<T>, Callback<String>)>,
     children: Children,
 ) -> impl IntoView {
+    let (server_error, set_server_error) = create_signal(None);
     let (modal_waiting, set_modal_waiting) = create_signal(false);
     let modal_elem = create_node_ref::<Dialog>();
     let open = Signal::derive(move || data.get().is_some());
 
+    let on_error = Callback::new(move |error: String| {
+        set_modal_waiting(false);
+        set_server_error(Some(error));
+    });
+
     create_effect(move |_| {
         if !open() {
             set_modal_waiting(false);
+            set_server_error(None);
         }
     });
 
@@ -270,7 +277,7 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
 
                 </h3>
                 <div class="flex flex-col gap-3">
-                    {children()} <Show when=move || !errors.get().is_empty()>
+                    {children()} <Show when=move || (!errors.get().is_empty() || server_error().is_some())>
                         <div class="rounded-lg p-4 flex bg-red-100 mt-2">
                             <div>
                                 <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
@@ -279,6 +286,13 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
                                 <For each=errors key=|x| x.clone() let:child>
                                     <p>{child.clone()}</p>
                                 </For>
+                                {move || {
+                                    match server_error() {
+                                        None => view! {}.into_view(),
+                                        Some(error) => view! { <p>{error}</p> }.into_view(),
+                                    }
+                                }}
+
                             </div>
                         </div>
                     </Show> <div class="flex flex-col-reverse gap-3 sm:flex-row-reverse">
@@ -300,7 +314,7 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
                             on:click=move |_ev| {
                                 if let Some(data) = data.get() {
                                     if !modal_waiting() && errors.get().is_empty() {
-                                        on_confirm(data);
+                                        on_confirm((data, on_error));
                                         set_modal_waiting(true);
                                     }
                                 }

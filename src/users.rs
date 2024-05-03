@@ -28,6 +28,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
+fn is_valid_pw(password: &str) -> bool {
+    (12..=1024).contains(&password.len())
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserQuery {
     #[serde(default)]
@@ -45,7 +49,7 @@ pub async fn list_users(query: UserQuery) -> Result<Vec<User>, ServerFnError> {
     if !search.is_empty() {
         query.push(" WHERE username LIKE concat('%', ");
         query.push_bind(&search);
-        query.push(", '%') )");
+        query.push(", '%')");
     }
 
     if let Some(order) = User::sorting_to_sql(&sort) {
@@ -84,34 +88,42 @@ pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
     Ok(())
 }
 
+#[cfg(feature = "ssr")]
+fn mk_password_hash(password: &str) -> Result<String, ServerFnError> {
+    if !is_valid_pw(password) {
+        return Err(ServerFnError::new("Password is invalid."));
+    }
+
+    Ok("".to_string())
+}
+
 #[server]
 pub async fn create_or_update_user(
-    username: Option<String>,
+    old_username: Option<String>,
+    username: String,
     password: String,
     admin: bool,
     active: bool,
 ) -> Result<(), ServerFnError> {
     let _user = crate::auth::auth_admin().await?;
     let pool = crate::database::ssr::pool()?;
-    // TODO: FIXME: duplicate detect
-    // TODO: FIXME: invalid detect (empty, @@, ...)
 
-    if let Some(username) = username {
+    if let Some(old_username) = old_username {
         let mut query = QueryBuilder::new("UPDATE users SET admin = ");
         query.push_bind(admin);
         if !password.is_empty() {
-            let password_hash = password; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            let password_hash = mk_password_hash(&password)?;
             query.push(", password_hash = ");
             query.push_bind(password_hash);
         }
         query.push(", active = ");
         query.push_bind(active);
         query.push(" WHERE username = ");
-        query.push_bind(username);
+        query.push_bind(old_username);
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        let password_hash = password; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+        let password_hash = mk_password_hash(&password)?;
         sqlx::query("INSERT INTO users (username, password_hash, admin, active) VALUES (?, ?, ?, ?)")
             .bind(username)
             .bind(password_hash)
@@ -209,28 +221,22 @@ pub fn Users() -> impl IntoView {
         }
     });
 
-    let on_edit = move |data: Option<User>| {
-        let password = edit_modal_input_password.get_untracked();
-        let password_repeat = edit_modal_input_password_repeat.get_untracked();
-        if password != password_repeat {
-            error!("Failed to create/update: passwords don't match");
-            return;
-        }
-
+    let on_edit = move |(data, on_error): (Option<User>, Callback<String>)| {
         spawn_local(async move {
             if let Err(e) = create_or_update_user(
                 data.map(|x| x.username),
-                password,
+                edit_modal_input_username.get_untracked(),
+                edit_modal_input_password.get_untracked(),
                 edit_modal_input_admin.get_untracked(),
                 edit_modal_input_active.get_untracked(),
             )
             .await
             {
-                error!("Failed to create/update: {}", e);
+                on_error(e.to_string())
             } else {
                 reload_controller.reload();
+                edit_modal_user.set(None);
             }
-            edit_modal_user.set(None);
         });
     };
 
@@ -292,8 +298,8 @@ pub fn Users() -> impl IntoView {
         // Either we edit an existing user (in which case an empty password means no change)
         // or the password is of correct length.
         let is_new = matches!(edit_modal_user.get(), Some(None));
-        let is_correct_len = (12..=1024).contains(&edit_modal_input_password().len());
-        let valid = is_correct_len || (!is_new && edit_modal_input_password().is_empty());
+        let is_valid_pw = is_valid_pw(&edit_modal_input_password());
+        let valid = is_valid_pw || (!is_new && edit_modal_input_password().is_empty());
         !valid
     });
     let errors = create_memo(move |_| {
@@ -407,6 +413,7 @@ pub fn Users() -> impl IntoView {
                             "Password (leave empty to keep current)"
                         }
                     }}
+
                 </label>
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
