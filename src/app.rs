@@ -1,6 +1,6 @@
 use crate::{
     aliases::Aliases,
-    auth::{get_user, Login, Logout},
+    auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
     users::Users,
@@ -8,11 +8,22 @@ use crate::{
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
-use leptos_router::{ActionForm, Route, Router, Routes};
+use leptos_router::{Redirect, Route, Router, Routes, A};
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Tab {
+    Aliases,
+    Mailboxes,
+    Domains,
+    Users,
+}
 
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+
+    let login = create_server_action::<Login>();
+    let logout = create_server_action::<Logout>();
 
     view! {
         <Link rel="shortcut icon" type_="image/ico" href="/favicon.ico"/>
@@ -20,7 +31,12 @@ pub fn App() -> impl IntoView {
         <Router>
             <main>
                 <Routes>
-                    <Route path="" view=Main/>
+                    <Route path="/" view=move || view! { <Redirect path="/login"/> }/>
+                    <Route path="/login" view=move || view! { <LoginView login logout/> }/>
+                    <Route path="/aliases" view=move || view! { <Tab login logout tab=Tab::Aliases/> }/>
+                    <Route path="/mailboxes" view=move || view! { <Tab login logout tab=Tab::Mailboxes/> }/>
+                    <Route path="/domains" view=move || view! { <Tab login logout tab=Tab::Domains/> }/>
+                    <Route path="/users" view=move || view! { <Tab login logout tab=Tab::Users/> }/>
                 </Routes>
             </main>
         </Router>
@@ -28,23 +44,25 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-pub fn Main() -> impl IntoView {
-    let login = create_server_action::<Login>();
-    let logout = create_server_action::<Logout>();
+pub fn Tab(
+    login: Action<Login, Result<(), ServerFnError>>,
+    logout: Action<Logout, Result<(), ServerFnError>>,
+    tab: Tab,
+) -> impl IntoView {
     let user = create_resource(
         move || (login.version().get(), logout.version().get()),
         move |_| get_user(),
     );
 
-    #[derive(Copy, Clone, PartialEq, Eq)]
-    enum Tab {
-        Aliases,
-        Mailboxes,
-        Domains,
-        Users,
-    }
-
-    let tab = create_rw_signal(Tab::Aliases);
+    let class_for = move |t| {
+        let a_class_inactive = "inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300".to_string();
+        let a_class_active = format!("{a_class_inactive} bg-indigo-100 text-indigo-700");
+        if t == tab {
+            a_class_active
+        } else {
+            a_class_inactive
+        }
+    };
 
     view! {
         <Transition fallback=move || {
@@ -53,16 +71,6 @@ pub fn Main() -> impl IntoView {
             {move || {
                 user.get()
                     .map(|user| match user {
-                        Err(e) => {
-                            view! {
-                                <div class="absolute">
-                                    <span>{format!("Login error: {}", e)}</span>
-                                </div>
-                                <Login action=login/>
-                            }
-                                .into_view()
-                        }
-                        Ok(None) => view! { <Login action=login/> }.into_view(),
                         Ok(Some(user)) => {
                             view! {
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
@@ -74,55 +82,19 @@ pub fn Main() -> impl IntoView {
                                             <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
                                         </div>
                                         <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
-                                            <button
-                                                type="button"
-                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
-                                                class=("bg-indigo-100", move || tab.get() == Tab::Aliases)
-                                                class=("text-indigo-700", move || tab.get() == Tab::Aliases)
-                                                on:click=move |_| {
-                                                    tab.set(Tab::Aliases);
-                                                }
-                                            >
-
+                                            <A href="/aliases" class=class_for(Tab::Aliases)>
                                                 "Aliases"
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
-                                                class=("bg-indigo-100", move || tab.get() == Tab::Mailboxes)
-                                                class=("text-indigo-700", move || tab.get() == Tab::Mailboxes)
-                                                on:click=move |_| {
-                                                    tab.set(Tab::Mailboxes);
-                                                }
-                                            >
-
+                                            </A>
+                                            <A href="/mailboxes" class=class_for(Tab::Mailboxes)>
                                                 "Mailboxes"
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
-                                                class=("bg-indigo-100", move || tab.get() == Tab::Domains)
-                                                class=("text-indigo-700", move || tab.get() == Tab::Domains)
-                                                on:click=move |_| {
-                                                    tab.set(Tab::Domains);
-                                                }
-                                            >
-
+                                            </A>
+                                            <A href="/domains" class=class_for(Tab::Domains)>
                                                 "Domains"
-                                            </button>
+                                            </A>
                                             <Show when=move || user.admin>
-                                                <button
-                                                    type="button"
-                                                    class="inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300"
-                                                    class=("bg-indigo-100", move || tab.get() == Tab::Users)
-                                                    class=("text-indigo-700", move || tab.get() == Tab::Users)
-                                                    on:click=move |_| {
-                                                        tab.set(Tab::Users);
-                                                    }
-                                                >
-
+                                                <A href="/users" class=class_for(Tab::Users)>
                                                     "Users"
-                                                </button>
+                                                </A>
                                             </Show>
                                         </div>
                                     </div>
@@ -175,37 +147,22 @@ pub fn Main() -> impl IntoView {
                                             </div>
                                         </div>
                                     </div>
-                                    {move || {
-                                        match tab.get() {
-                                            Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
-                                            Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
-                                            Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
-                                            Tab::Users => view! { <Users/> }.into_view(),
-                                        }
+
+                                    {match tab {
+                                        Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
+                                        Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
+                                        Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
+                                        Tab::Users => view! { <Users/> }.into_view(),
                                     }}
 
                                 </div>
                             }
                                 .into_view()
                         }
+                        _ => view! { <Redirect path="/login"/> }.into_view(),
                     })
             }}
 
         </Transition>
-    }
-}
-
-#[component]
-pub fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
-    view! {
-        <ActionForm action=action>
-            <button
-                type="submit"
-                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-transparent border-[1.5px] border-gray-200 hover:bg-gray-200 focus:ring-ring"
-            >
-                <Icon icon=icondata::FiLogOut class="w-6 h-6 me-2"/>
-                "Log Out"
-            </button>
-        </ActionForm>
     }
 }

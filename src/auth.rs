@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::ActionForm;
+use leptos_router::{ActionForm, Redirect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -224,5 +224,55 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                 </div>
             </div>
         </div>
+    }
+}
+
+#[component]
+pub fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
+    view! {
+        <ActionForm action=action>
+            <button
+                type="submit"
+                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-transparent border-[1.5px] border-gray-200 hover:bg-gray-200 focus:ring-ring"
+            >
+                <Icon icon=icondata::FiLogOut class="w-6 h-6 me-2"/>
+                "Log Out"
+            </button>
+        </ActionForm>
+    }
+}
+
+#[component]
+pub fn LoginView(
+    login: Action<Login, Result<(), ServerFnError>>,
+    logout: Action<Logout, Result<(), ServerFnError>>,
+) -> impl IntoView {
+    let user = create_resource(
+        move || (login.version().get(), logout.version().get()),
+        move |_| get_user(),
+    );
+
+    view! {
+        <Transition fallback=move || {
+            view! { <span class="text-gray-300">"Loading..."</span> }
+        }>
+            {move || {
+                user.get()
+                    .map(|user| match user {
+                        Err(e) => {
+                            view! {
+                                <div class="absolute">
+                                    <span>{format!("Login error: {}", e)}</span>
+                                </div>
+                                <Login action=login/>
+                            }
+                                .into_view()
+                        }
+                        Ok(None) => view! { <Login action=login/> }.into_view(),
+                        Ok(Some(_)) => view! { <Redirect path="/aliases"/> }.into_view(),
+                    })
+            }}
+
+        </Transition>
     }
 }
