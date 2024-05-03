@@ -87,7 +87,7 @@ pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
 #[server]
 pub async fn create_or_update_user(
     username: Option<String>,
-    password_hash: String,
+    password: String,
     admin: bool,
     active: bool,
 ) -> Result<(), ServerFnError> {
@@ -97,10 +97,13 @@ pub async fn create_or_update_user(
     // TODO: FIXME: invalid detect (empty, @@, ...)
 
     if let Some(username) = username {
-        let mut query = QueryBuilder::new("UPDATE users SET password_hash = ");
-        query.push_bind(password_hash);
-        query.push(", admin = ");
+        let mut query = QueryBuilder::new("UPDATE users SET admin = ");
         query.push_bind(admin);
+        if !password.is_empty() {
+            let password_hash = password; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            query.push(", password_hash = ");
+            query.push_bind(password_hash);
+        }
         query.push(", active = ");
         query.push_bind(active);
         query.push(" WHERE username = ");
@@ -108,6 +111,7 @@ pub async fn create_or_update_user(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
+        let password_hash = password; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
         sqlx::query("INSERT INTO users (username, password_hash, admin, active) VALUES (?, ?, ?, ?)")
             .bind(username)
             .bind(password_hash)
@@ -206,18 +210,17 @@ pub fn Users() -> impl IntoView {
     });
 
     let on_edit = move |data: Option<User>| {
-        spawn_local(async move {
-            let pw = edit_modal_input_password.get_untracked();
-            let pw_repeat = edit_modal_input_password_repeat.get_untracked();
-            if pw != pw_repeat {
-                error!("Failed to create/update: passwords don't match");
-                return;
-            }
+        let password = edit_modal_input_password.get_untracked();
+        let password_repeat = edit_modal_input_password_repeat.get_untracked();
+        if password != password_repeat {
+            error!("Failed to create/update: passwords don't match");
+            return;
+        }
 
-            let password_hash = pw; // TODO: FIXME: NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+        spawn_local(async move {
             if let Err(e) = create_or_update_user(
                 data.map(|x| x.username),
-                password_hash,
+                password,
                 edit_modal_input_admin.get_untracked(),
                 edit_modal_input_active.get_untracked(),
             )
@@ -285,14 +288,21 @@ pub fn Users() -> impl IntoView {
     };
 
     let has_password_mismatch = move || edit_modal_input_password() != edit_modal_input_password_repeat();
-    let has_invalid_password = move || !(16..=1024).contains(&edit_modal_input_password().len());
+    let has_invalid_password = create_memo(move |_| {
+        // Either we edit an existing user (in which case an empty password means no change)
+        // or the password is of correct length.
+        let is_new = matches!(edit_modal_user.get(), Some(None));
+        let is_correct_len = (12..=1024).contains(&edit_modal_input_password().len());
+        let valid = is_correct_len || (!is_new && edit_modal_input_password().is_empty());
+        !valid
+    });
     let errors = create_memo(move |_| {
         let mut errors = Vec::new();
         if has_password_mismatch() {
             errors.push("Passwords don't match".to_string());
         }
         if has_invalid_password() {
-            errors.push("Password must be between 16 and 512 characters".to_string());
+            errors.push("Password must be between 12 and 512 characters".to_string());
         }
         errors
     });
@@ -390,7 +400,13 @@ pub fn Users() -> impl IntoView {
                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     for="password"
                 >
-                    Password
+                    {move || {
+                        if matches!(edit_modal_user.get(), Some(None)) {
+                            "Password"
+                        } else {
+                            "Password (leave empty to keep current)"
+                        }
+                    }}
                 </label>
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
