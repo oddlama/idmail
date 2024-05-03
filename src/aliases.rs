@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::ops::Range;
+use std::str::FromStr;
 
 use crate::auth::User;
 use crate::utils::{DeleteModal, EditModal, Select};
@@ -42,6 +43,11 @@ pub struct AliasQuery {
     sort: VecDeque<(usize, ColumnSort)>,
     range: Range<usize>,
     search: String,
+}
+
+fn validate_email(alias: &str, domain: &str) -> Result<String, email_address::Error> {
+    let address = format!("{alias}@{domain}");
+    email_address::EmailAddress::from_str(&address).map(|x| x.to_string())
 }
 
 #[server]
@@ -138,11 +144,20 @@ pub async fn create_or_update_alias(
     let owner = if user.admin { owner.trim() } else { &user.username };
     // Empty owner -> self owned
     let owner = if owner.is_empty() { &user.username } else { owner };
-    // TODO: FIXME: target= empty?self:..
-    // TODO: FIXME: duplicate detect
-    // TODO: FIXME: invalid detect (empty, @@, ...)
 
-    let address = format!("{alias}@{domain}");
+    let target = if target.is_empty() || !user.admin {
+        if user.mailbox {
+            &user.username
+        } else {
+            return Err(ServerFnError::new("target must be set to a valid email address"));
+        }
+    } else {
+        &target
+    };
+
+    // Check if address is valid
+    let address = validate_email(&alias, &domain)?;
+
     if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE aliases SET address = ");
         query.push_bind(address);
@@ -163,7 +178,7 @@ pub async fn create_or_update_alias(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO aliases (address, target, comment, owner, active) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO aliases (address, target, comment, owner, active) VALUES (?, ?, ?, ?, ?)")
             .bind(address)
             .bind(target)
             .bind(comment)
@@ -254,8 +269,20 @@ pub fn Aliases(user: User) -> impl IntoView {
         });
     };
 
+    let (allowed_targets, set_allowed_targets) = create_signal(vec![]);
+    let refresh_targets = move || {
+        //spawn_local(async move {
+        //    use crate::mailboxes::allowed_targets;
+        //    match allowed_targets().await {
+        //        Err(e) => error!("Failed to load allowed targets: {}", e),
+        //        Ok(targets) => set_allowed_targets(targets),
+        //    }
+        //});
+    };
+
     if is_browser() {
         refresh_domains();
+        refresh_targets();
     }
 
     let delete_modal_alias = create_rw_signal(None);
@@ -268,8 +295,10 @@ pub fn Aliases(user: User) -> impl IntoView {
     let (edit_modal_input_active, set_edit_modal_input_active) = create_signal(true);
     let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
 
+    let username = user.username.clone();
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
         refresh_domains();
+        refresh_targets();
         edit_modal_alias.set(Some(edit_alias.clone()));
 
         let allowed_domains = allowed_domains.get();
@@ -297,15 +326,16 @@ pub fn Aliases(user: User) -> impl IntoView {
             if !allowed_domains.contains(&edit_modal_input_domain()) {
                 set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
             }
-            // TODO set from user
-            //set_edit_modal_input_target("".to_string());
+            if user.mailbox {
+                set_edit_modal_input_target(username.clone());
+            } else {
+                set_edit_modal_input_target("".to_string());
+            }
             set_edit_modal_input_comment("".to_string());
             set_edit_modal_input_active(true);
             set_edit_modal_input_owner("".to_string());
         }
     });
-
-    let errors = move || { Vec::new() };
 
     let on_edit = move |(data, on_error): (Option<Alias>, Callback<String>)| {
         spawn_local(async move {
@@ -371,6 +401,24 @@ pub fn Aliases(user: User) -> impl IntoView {
             </tr>
         }
     };
+
+    let has_invalid_email =
+        create_memo(move |_| validate_email(&edit_modal_input_alias(), &edit_modal_input_domain()).is_err());
+    let has_invalid_target = create_memo(move |_| {
+        email_address::EmailAddress::from_str(&edit_modal_input_target()).is_err()
+            || (!user.admin && edit_modal_input_target().is_empty())
+    });
+
+    let errors = create_memo(move |_| {
+        let mut errors = Vec::<String>::new();
+        if let Err(e) = validate_email(&edit_modal_input_alias(), &edit_modal_input_domain()) {
+            errors.push(format!("invalid alias address: {}", e.to_string()));
+        }
+        if let Err(e) = email_address::EmailAddress::from_str(&edit_modal_input_target()) {
+            errors.push(format!("invalid target address: {}", e.to_string()));
+        }
+        errors
+    });
 
     view! {
         <div class="h-full flex-1 flex-col mt-12">
@@ -461,6 +509,8 @@ pub fn Aliases(user: User) -> impl IntoView {
                     <div class="flex flex-row">
                         <input
                             class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class=("!ring-4", has_invalid_email)
+                            class=("!ring-red-500", has_invalid_email)
                             type="email"
                             placeholder="alias"
                             on:input=move |ev| set_edit_modal_input_alias(event_target_value(&ev))
@@ -491,15 +541,37 @@ pub fn Aliases(user: User) -> impl IntoView {
                 >
                     Target
                 </label>
-                <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    type="email"
-                    // TODO value from user
-                    placeholder="target@example.com"
-                    on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
-                    prop:value=edit_modal_input_target
-                    disabled
-                />
+
+                {if user.admin || user.mailbox {
+                    view! {
+                        <input
+                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class=("!ring-4", has_invalid_target)
+                            class=("!ring-red-500", has_invalid_target)
+                            type="email"
+                            placeholder=if user.mailbox {
+                                user.username.clone()
+                            } else {
+                                "target@example.com".to_string()
+                            }
+                            on:input=move |ev| set_edit_modal_input_target(event_target_value(&ev))
+                            prop:value=edit_modal_input_target
+                            disabled=!user.admin
+                        />
+                    }
+                        .into_view()
+                } else {
+                    view! {
+                        <Select
+                            class="w-full h-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                            choices=allowed_targets
+                            value=edit_modal_input_target
+                            set_value=set_edit_modal_input_target
+                        />
+                    }
+                        .into_view()
+                }}
+
             </div>
             <div class="flex flex-col gap-2">
                 <label
@@ -526,10 +598,10 @@ pub fn Aliases(user: User) -> impl IntoView {
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
-                    placeholder="admin"
+                    placeholder=user.username.clone()
                     on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
                     prop:value=edit_modal_input_owner
-                    disabled=move || !user.admin
+                    disabled=!user.admin
                 />
             </div>
             <div class="flex flex-row gap-2 mt-2 items-center">

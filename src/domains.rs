@@ -148,7 +148,6 @@ pub async fn create_or_update_domain(
     let owner = if owner.is_empty() { &user.username } else { owner };
     // Only admins may create public domains
     let public = public && user.admin;
-    // TODO: FIXME: duplicate detect
     // TODO: FIXME: invalid detect (empty, @@, ...)
 
     if let Some(old_domain) = old_domain {
@@ -174,8 +173,8 @@ pub async fn create_or_update_domain(
         sqlx::query("INSERT INTO domains (domain, catch_all, public, active, owner) VALUES (?, ?, ?, ?, ?)")
             .bind(domain)
             .bind(catch_all)
-            .bind(active)
             .bind(public)
+            .bind(active)
             .bind(owner)
             .execute(&pool)
             .await
@@ -277,7 +276,7 @@ pub fn Domains(user: User) -> impl IntoView {
         } else {
             set_edit_modal_input_domain("".to_string());
             set_edit_modal_input_catchall("".to_string());
-            set_edit_modal_input_public(true);
+            set_edit_modal_input_public(user.admin);
             set_edit_modal_input_active(true);
             set_edit_modal_input_owner("".to_string());
         }

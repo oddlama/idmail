@@ -20,6 +20,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 chrono-humanize = { version = "0.2.3", features = ["wasmbind"] }
 console_error_panic_hook = "0.1"
 console_log = "1.0"
+email_address = "0.2.4"
 futures = "0.3"
 http = "1.0"
 icondata = "0.3.0"
