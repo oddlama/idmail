@@ -28,7 +28,7 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-fn is_valid_pw(password: &str) -> bool {
+pub(crate) fn is_valid_pw(password: &str) -> bool {
     (12..=1024).contains(&password.len())
 }
 
@@ -89,7 +89,7 @@ pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
-fn mk_password_hash(password: &str) -> Result<String, ServerFnError> {
+pub(crate) fn mk_password_hash(password: &str) -> Result<String, ServerFnError> {
     if !is_valid_pw(password) {
         return Err(ServerFnError::new("Password is invalid."));
     }
@@ -189,7 +189,7 @@ impl TableDataProvider<User> for UserTableDataProvider {
 #[component]
 pub fn Users() -> impl IntoView {
     let mut rows = UserTableDataProvider::default();
-    let default_sorting = VecDeque::from([(2, ColumnSort::Descending)]);
+    let default_sorting = VecDeque::from([(3, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
     let sorting = create_rw_signal(default_sorting);
 

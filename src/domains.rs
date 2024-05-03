@@ -164,7 +164,7 @@ pub async fn create_or_update_domain(
         query.push(" WHERE domain = ");
         query.push_bind(old_domain);
         if !user.admin {
-            query.push(" AND owner = ?");
+            query.push(" AND owner = ");
             query.push_bind(&user.username);
         }
 

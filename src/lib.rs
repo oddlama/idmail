@@ -6,6 +6,7 @@ pub mod domains;
 pub mod error_template;
 #[cfg(feature = "ssr")]
 pub mod fileserv;
+pub mod mailboxes;
 #[cfg(feature = "ssr")]
 pub mod state;
 pub mod users;

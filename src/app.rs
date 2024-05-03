@@ -2,6 +2,7 @@ use crate::{
     aliases::Aliases,
     auth::{get_user, Login, Logout},
     domains::Domains,
+    mailboxes::Mailboxes,
     users::Users,
 };
 use leptos::*;
@@ -177,7 +178,7 @@ pub fn Main() -> impl IntoView {
                                     {move || {
                                         match tab.get() {
                                             Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
-                                            Tab::Mailboxes => view! {}.into_view(),
+                                            Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
                                             Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
                                             Tab::Users => view! { <Users/> }.into_view(),
                                         }
