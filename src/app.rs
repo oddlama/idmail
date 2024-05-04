@@ -1,5 +1,5 @@
 use crate::{
-    aliases::Aliases,
+    aliases::{alias_count, Aliases},
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
@@ -142,6 +142,13 @@ pub fn Tab(
         OnClickOutsideOptions::default().ignore(["#account-button"]),
     );
 
+    let all_alias_count = create_resource(|| (), |_| async move { alias_count(None).await });
+    let inactive_alias_count = create_resource(|| (), |_| async move { alias_count(Some(false)).await });
+    let reload_stats = Callback::new(move |_: ()| {
+        all_alias_count.refetch();
+        inactive_alias_count.refetch();
+    });
+
     view! {
         <Transition fallback=move || {
             view! { <span class="text-gray-300">"Loading..."</span> }
@@ -154,12 +161,12 @@ pub fn Tab(
                             view! {
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
                                     <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
-                                        <div class="flex flex-row items-center mb-4 sm:mb-0">
+                                        <A href="/aliases" class="flex flex-row items-center mb-4 sm:mb-0">
                                             <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
                                                 idmail
                                             </h2>
                                             <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
-                                        </div>
+                                        </A>
                                         <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
                                             <A href="/aliases" class=class_for(Tab::Aliases)>
                                                 "Aliases"
@@ -226,11 +233,11 @@ pub fn Tab(
                                                 </div>
                                                 <div class="truncate">{user.username.clone()}</div>
                                             </div>
-                                            <ul class="py-2 text-sm text-gray-700">
+                                            <ul class="py-2 text-sm">
                                                 <li>
                                                     <A
                                                         href="/account"
-                                                        class="block px-4 py-2 w-full text-sm text-left text-gray-700 hover:bg-gray-100"
+                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100"
                                                     >
                                                         "Settings"
                                                     </A>
@@ -240,7 +247,7 @@ pub fn Tab(
                                                 <ActionForm action=logout>
                                                     <button
                                                         type="submit"
-                                                        class="block px-4 py-2 w-full text-sm text-left text-gray-700 hover:bg-gray-100"
+                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100"
                                                     >
                                                         "Sign Out"
                                                     </button>
@@ -253,41 +260,62 @@ pub fn Tab(
                                     <Show when=move || tab != Tab::AccountSettings>
                                         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                             <div class="rounded-xl border-[1.5px]">
-                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
                                                     <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
                                                 </div>
-                                                <div class="p-6 pt-0">
-                                                    <div class="text-2xl font-bold">1412</div>
-                                                    <p class="text-xs text-muted-foreground">+20.1% from last month</p>
+                                                <div class="p-4 pt-0">
+                                                    <div class="text-2xl font-bold">
+                                                        <Transition fallback=move || {
+                                                            view! { <p class="animate-pulse">"..."</p> }
+                                                        }>
+                                                            {move || match all_alias_count.get() {
+                                                                Some(Ok(count)) => view! { {count} }.into_view(),
+                                                                _ => view! {}.into_view(),
+                                                            }}
+
+                                                        </Transition>
+                                                    </div>
+                                                    <p class="text-xs text-muted-foreground">
+                                                        "including "
+                                                        <Transition fallback=move || {
+                                                            view! { <span class="animate-pulse">"..."</span> }
+                                                        }>
+                                                            {move || match inactive_alias_count.get() {
+                                                                Some(Ok(count)) => view! { {count} }.into_view(),
+                                                                _ => view! {}.into_view(),
+                                                            }}
+
+                                                        </Transition> " inactive aliases"
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px]">
-                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Mailboxes</h3>
                                                     <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
                                                 </div>
-                                                <div class="p-6 pt-0">
+                                                <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+2350</div>
                                                     <p class="text-xs text-muted-foreground">+180.1% from last month</p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px]">
-                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
                                                     <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
                                                 </div>
-                                                <div class="p-6 pt-0">
+                                                <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+12,234</div>
                                                     <p class="text-xs text-muted-foreground">+19% from last month</p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px]">
-                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
                                                     <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
                                                 </div>
-                                                <div class="p-6 pt-0">
+                                                <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+573</div>
                                                     <p class="text-xs text-muted-foreground">+201 since last hour</p>
                                                 </div>
@@ -296,7 +324,7 @@ pub fn Tab(
                                     </Show>
 
                                     {match tab {
-                                        Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
+                                        Tab::Aliases => view! { <Aliases user=user.clone() reload_stats/> }.into_view(),
                                         Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
                                         Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
                                         Tab::Users => view! { <Users/> }.into_view(),

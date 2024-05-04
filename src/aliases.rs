@@ -51,8 +51,8 @@ pub(crate) fn validate_email(localpart: &str, domain: &str) -> Result<String, em
 }
 
 #[cfg(feature = "ssr")]
-pub(crate) fn push_check_aliases_owner(query: &mut QueryBuilder<'_, sqlx::Sqlite>, username: String) {
-    query.push(" ( owner = ");
+pub(crate) fn push_and_check_aliases_owner(query: &mut QueryBuilder<'_, sqlx::Sqlite>, username: String) {
+    query.push(" AND ( owner = ");
     query.push_bind(username.clone());
     query.push(
         " OR owner IN ( \
@@ -70,8 +70,7 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
 
     let mut query = QueryBuilder::new("SELECT * FROM aliases WHERE 1=1");
     if !user.admin {
-        query.push(" AND");
-        push_check_aliases_owner(&mut query, user.username.clone());
+        push_and_check_aliases_owner(&mut query, user.username.clone());
     }
     if !search.is_empty() {
         query.push(" AND ( address LIKE concat('%', ");
@@ -97,14 +96,17 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
     Ok(query.build_query_as::<Alias>().fetch_all(&pool).await?)
 }
 
+/// Count all aliases, or just active/inactive ones if specified.
 #[server]
-pub async fn alias_count() -> Result<usize, ServerFnError> {
+pub async fn alias_count(active: Option<bool>) -> Result<usize, ServerFnError> {
     let user = crate::auth::auth_any().await?;
 
-    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM aliases");
+    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM aliases WHERE 1=1");
     if !user.admin {
-        query.push(" WHERE");
-        push_check_aliases_owner(&mut query, user.username.clone());
+        push_and_check_aliases_owner(&mut query, user.username.clone());
+    }
+    if let Some(active) = active {
+        query.push(format!(" AND active = {}", if active { "TRUE" } else { "FALSE" }));
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -122,8 +124,7 @@ pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
 
     // Non-admins can only delete their own aliases
     if !user.admin {
-        query.push(" AND");
-        push_check_aliases_owner(&mut query, user.username.clone());
+        push_and_check_aliases_owner(&mut query, user.username.clone());
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -190,8 +191,7 @@ pub async fn create_or_update_alias(
         query.push(" WHERE address = ");
         query.push_bind(old_address);
         if !user.admin {
-            query.push(" AND");
-            push_check_aliases_owner(&mut query, user.username.clone());
+            push_and_check_aliases_owner(&mut query, user.username.clone());
         }
 
         query.build().execute(&pool).await.map(|_| ())?;
@@ -220,8 +220,7 @@ pub async fn update_alias_active(address: String, active: bool) -> Result<(), Se
 
     // Non-admins can only change their own aliases
     if !user.admin {
-        query.push(" AND");
-        push_check_aliases_owner(&mut query, user.username.clone());
+        push_and_check_aliases_owner(&mut query, user.username.clone());
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -251,7 +250,7 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
     }
 
     async fn row_count(&self) -> Option<usize> {
-        alias_count().await.ok()
+        alias_count(None).await.ok()
     }
 
     fn set_sorting(&mut self, sorting: &VecDeque<(usize, ColumnSort)>) {
@@ -264,13 +263,20 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
 }
 
 #[component]
-pub fn Aliases(user: User) -> impl IntoView {
+pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
     let mut rows = AliasTableDataProvider::default();
     let default_sorting = VecDeque::from([(7, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
     let sorting = create_rw_signal(default_sorting);
 
+    let reload = create_trigger();
     let reload_controller = ReloadController::default();
+    create_effect(move |_| {
+        reload.track();
+        reload_controller.reload();
+        reload_stats(());
+    });
+
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
@@ -352,6 +358,9 @@ pub fn Aliases(user: User) -> impl IntoView {
             if !allowed_domains.contains(&edit_modal_input_domain()) {
                 set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
             }
+            // set_edit_modal_input_owner is already set by settings target via an effect,
+            // but we initialize it before in case we are an admin or mailbox
+            set_edit_modal_input_owner(username.clone());
             if is_mailbox {
                 set_edit_modal_input_target(username.clone());
             } else {
@@ -361,7 +370,6 @@ pub fn Aliases(user: User) -> impl IntoView {
             }
             set_edit_modal_input_comment("".to_string());
             set_edit_modal_input_active(true);
-            set_edit_modal_input_owner("".to_string());
         }
     });
 
@@ -380,7 +388,7 @@ pub fn Aliases(user: User) -> impl IntoView {
             {
                 on_error(e.to_string())
             } else {
-                reload_controller.reload();
+                reload.notify();
                 edit_modal_alias.set(None);
             }
         });
@@ -391,7 +399,7 @@ pub fn Aliases(user: User) -> impl IntoView {
             if let Err(e) = update_alias_active(ev.changed_row.address.clone(), ev.changed_row.active).await {
                 error!("Failed to update active status of {}: {}", ev.changed_row.address, e);
             }
-            reload_controller.reload();
+            reload.notify();
         });
     };
 
@@ -512,7 +520,7 @@ pub fn Aliases(user: User) -> impl IntoView {
                     if let Err(e) = delete_alias(data).await {
                         error!("Failed to delete alias: {}", e);
                     } else {
-                        reload_controller.reload();
+                        reload.notify();
                     }
                     delete_modal_alias.set(None);
                 });
