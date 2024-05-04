@@ -80,6 +80,11 @@ pub async fn user_count() -> Result<usize, ServerFnError> {
 #[server]
 pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
     let _user = crate::auth::auth_admin().await?;
+
+    // Force user reload on next request
+    let auth = crate::database::ssr::auth()?;
+    auth.cache_clear_user(username.clone());
+
     let mut query = QueryBuilder::new("DELETE FROM users WHERE username = ");
     query.push_bind(username);
 
@@ -105,8 +110,12 @@ pub async fn change_password(current_password: String, new_password: String) -> 
 
     // Reauthenticate
     let _ = crate::auth::authenticate_user(user.username.clone(), current_password.clone()).await?;
-
     let password_hash = mk_password_hash(&new_password)?;
+
+    // Force user reload on next request
+    let auth = crate::database::ssr::auth()?;
+    auth.cache_clear_user(user.username.clone());
+
     let mut query = QueryBuilder::new("UPDATE users SET password_hash = ");
     query.push_bind(password_hash);
     query.push(" WHERE username = ");
@@ -130,6 +139,10 @@ pub async fn create_or_update_user(
     let pool = crate::database::ssr::pool()?;
 
     if let Some(old_username) = old_username {
+        // Force user reload on next request
+        let auth = crate::database::ssr::auth()?;
+        auth.cache_clear_user(username.clone());
+
         let mut query = QueryBuilder::new("UPDATE users SET admin = ");
         query.push_bind(admin);
         if !password.is_empty() {
