@@ -3,11 +3,11 @@ use crate::{
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
-    users::{Users, AccountSettings},
+    users::{AccountSettings, Users},
 };
 use leptos::{html::Div, *};
 use leptos_icons::Icon;
-use leptos_meta::{provide_meta_context, Link, Stylesheet};
+use leptos_meta::{provide_meta_context, Link, Stylesheet, Title};
 use leptos_router::{ActionForm, Redirect, Route, Router, Routes, A};
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
@@ -30,17 +30,80 @@ pub fn App() -> impl IntoView {
     view! {
         <Link rel="shortcut icon" type_="image/ico" href="/favicon.ico"/>
         <Stylesheet id="leptos" href="/pkg/idmail.css"/>
+        <Title formatter=|text| format!("{text} · idmail")/>
         <Router>
             <main>
                 <Routes>
-                    <Route path="/" view=move || view! { <Redirect path="/login"/> }/>
-                    <Route path="/login" view=move || view! { <LoginView login logout/> }/>
+                    <Route
+                        path="/"
+                        view=move || {
+                            view! {
+                                <Title text="Login"/>
+                                <Redirect path="/login"/>
+                            }
+                        }
+                    />
 
-                    <Route path="/aliases" view=move || view! { <Tab login logout tab=Tab::Aliases/> }/>
-                    <Route path="/mailboxes" view=move || view! { <Tab login logout tab=Tab::Mailboxes/> }/>
-                    <Route path="/domains" view=move || view! { <Tab login logout tab=Tab::Domains/> }/>
-                    <Route path="/users" view=move || view! { <Tab login logout tab=Tab::Users/> }/>
-                    <Route path="/account" view=move || view! { <Tab login logout tab=Tab::AccountSettings/> }/>
+                    <Route
+                        path="/login"
+                        view=move || {
+                            view! {
+                                <Title text="Login"/>
+                                <LoginView login logout/>
+                            }
+                        }
+                    />
+
+                    <Route
+                        path="/aliases"
+                        view=move || {
+                            view! {
+                                <Title text="Aliases"/>
+                                <Tab login logout tab=Tab::Aliases/>
+                            }
+                        }
+                    />
+
+                    <Route
+                        path="/mailboxes"
+                        view=move || {
+                            view! {
+                                <Title text="Mailboxes"/>
+                                <Tab login logout tab=Tab::Mailboxes/>
+                            }
+                        }
+                    />
+
+                    <Route
+                        path="/domains"
+                        view=move || {
+                            view! {
+                                <Title text="Domains"/>
+                                <Tab login logout tab=Tab::Domains/>
+                            }
+                        }
+                    />
+
+                    <Route
+                        path="/users"
+                        view=move || {
+                            view! {
+                                <Title text="Users"/>
+                                <Tab login logout tab=Tab::Users/>
+                            }
+                        }
+                    />
+
+                    <Route
+                        path="/account"
+                        view=move || {
+                            view! {
+                                <Title text="Account Settings"/>
+                                <Tab login logout tab=Tab::AccountSettings/>
+                            }
+                        }
+                    />
+
                 </Routes>
             </main>
         </Router>
@@ -87,6 +150,7 @@ pub fn Tab(
                 user.get()
                     .map(|user| match user {
                         Ok(Some(user)) => {
+                            let is_mailbox = user.mailbox_owner.is_some();
                             view! {
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
                                     <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
@@ -100,12 +164,14 @@ pub fn Tab(
                                             <A href="/aliases" class=class_for(Tab::Aliases)>
                                                 "Aliases"
                                             </A>
-                                            <A href="/mailboxes" class=class_for(Tab::Mailboxes)>
-                                                "Mailboxes"
-                                            </A>
-                                            <A href="/domains" class=class_for(Tab::Domains)>
-                                                "Domains"
-                                            </A>
+                                            <Show when=move || !is_mailbox>
+                                                <A href="/mailboxes" class=class_for(Tab::Mailboxes)>
+                                                    "Mailboxes"
+                                                </A>
+                                                <A href="/domains" class=class_for(Tab::Domains)>
+                                                    "Domains"
+                                                </A>
+                                            </Show>
                                             <Show when=move || user.admin>
                                                 <A href="/users" class=class_for(Tab::Users)>
                                                     "Users"
@@ -151,7 +217,7 @@ pub fn Tab(
                                                 <div class="font-medium">
                                                     {if user.admin {
                                                         "Admin"
-                                                    } else if user.mailbox {
+                                                    } else if is_mailbox {
                                                         "Mailbox"
                                                     } else {
                                                         "User"

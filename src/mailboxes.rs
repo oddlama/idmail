@@ -42,9 +42,12 @@ pub struct MailboxQuery {
 
 #[server]
 pub async fn allowed_targets() -> Result<Vec<String>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
+
+    // Mailbox users can only target themselves
+    if user.mailbox_owner.is_some() {
+        return Ok(vec![user.username]);
+    }
 
     let mut query = QueryBuilder::new("SELECT address FROM mailboxes");
     query.push(" WHERE owner = ");
@@ -56,9 +59,7 @@ pub async fn allowed_targets() -> Result<Vec<String>, ServerFnError> {
 
 #[server]
 pub async fn list_mailboxes(query: MailboxQuery) -> Result<Vec<Mailbox>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let MailboxQuery { sort, range, search } = query;
 
@@ -91,9 +92,7 @@ pub async fn list_mailboxes(query: MailboxQuery) -> Result<Vec<Mailbox>, ServerF
 
 #[server]
 pub async fn mailbox_count() -> Result<usize, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let mut query = QueryBuilder::new("SELECT COUNT(*) FROM mailboxes");
     if !user.admin {
@@ -109,9 +108,7 @@ pub async fn mailbox_count() -> Result<usize, ServerFnError> {
 
 #[server]
 pub async fn delete_mailbox(address: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let mut query = QueryBuilder::new("DELETE FROM mailboxes WHERE address = ");
     query.push_bind(address);
@@ -137,9 +134,7 @@ pub async fn create_or_update_mailbox(
     owner: String,
 ) -> Result<(), ServerFnError> {
     use crate::users::mk_password_hash;
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
     let pool = crate::database::ssr::pool()?;
 
     // Only admins can assign other owners
@@ -188,9 +183,7 @@ pub async fn create_or_update_mailbox(
 
 #[server]
 pub async fn update_mailbox_active(address: String, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
     let mut query = QueryBuilder::new("UPDATE mailboxes SET active = ");
     query.push_bind(active);
     query.push(" WHERE address = ");
@@ -388,7 +381,7 @@ pub fn Mailboxes(user: User) -> impl IntoView {
     let errors = create_memo(move |_| {
         let mut errors = Vec::new();
         if let Err(e) = validate_email(&edit_modal_input_localpart(), &edit_modal_input_domain()) {
-            errors.push(format!("invalid address: {}", e.to_string()));
+            errors.push(format!("invalid address: {}", e));
         }
         if has_password_mismatch() {
             errors.push("Passwords don't match".to_string());

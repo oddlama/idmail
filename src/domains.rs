@@ -41,13 +41,15 @@ pub struct DomainQuery {
 
 #[server]
 pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
 
     let mut query = QueryBuilder::new("SELECT domain FROM domains");
     query.push(" WHERE public = TRUE OR owner = ");
     query.push_bind(&user.username);
+    if let Some(mailbox_owner) = user.mailbox_owner {
+        query.push(" OR owner = ");
+        query.push_bind(mailbox_owner.clone());
+    }
 
     let pool = crate::database::ssr::pool()?;
     Ok(query.build_query_scalar::<String>().fetch_all(&pool).await?)
@@ -55,9 +57,7 @@ pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
 
 #[server]
 pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let DomainQuery { sort, range, search } = query;
 
@@ -92,9 +92,7 @@ pub async fn list_domains(query: DomainQuery) -> Result<Vec<Domain>, ServerFnErr
 
 #[server]
 pub async fn domain_count() -> Result<usize, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let mut query = QueryBuilder::new("SELECT COUNT(*) FROM domains");
     if !user.admin {
@@ -110,9 +108,7 @@ pub async fn domain_count() -> Result<usize, ServerFnError> {
 
 #[server]
 pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
     query.push_bind(domain);
@@ -137,9 +133,7 @@ pub async fn create_or_update_domain(
     active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
     let pool = crate::database::ssr::pool()?;
 
     // Only admins can assign other owners
@@ -186,9 +180,7 @@ pub async fn create_or_update_domain(
 
 #[server]
 pub async fn update_domain_public_and_active(domain: String, public: bool, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_user().await?;
 
     // Only admins may create public domains
     let public = public && user.admin;
@@ -282,7 +274,7 @@ pub fn Domains(user: User) -> impl IntoView {
         }
     });
 
-    let errors = move || { Vec::new() };
+    let errors = move || Vec::new();
 
     let on_edit = move |(data, on_error): (Option<Domain>, Callback<String>)| {
         spawn_local(async move {
@@ -468,27 +460,29 @@ pub fn Domains(user: User) -> impl IntoView {
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
-                    placeholder="admin"
+                    placeholder=move || user.username.clone()
                     on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
                     prop:value=edit_modal_input_owner
                     disabled=move || !user.admin
                 />
             </div>
-            <div class="flex flex-row gap-2 mt-2 items-center">
-                <input
-                    id="public"
-                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
-                    type="checkbox"
-                    on:change=move |ev| set_edit_modal_input_public(event_target_checked(&ev))
-                    prop:checked=edit_modal_input_public
-                />
-                <label
-                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    for="public"
-                >
-                    Public
-                </label>
-            </div>
+            <Show when=move || user.admin>
+                <div class="flex flex-row gap-2 mt-2 items-center">
+                    <input
+                        id="public"
+                        class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                        type="checkbox"
+                        on:change=move |ev| set_edit_modal_input_public(event_target_checked(&ev))
+                        prop:checked=edit_modal_input_public
+                    />
+                    <label
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        for="public"
+                    >
+                        Public
+                    </label>
+                </div>
+            </Show>
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
                     id="domains_active"

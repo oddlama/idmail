@@ -50,18 +50,28 @@ pub(crate) fn validate_email(localpart: &str, domain: &str) -> Result<String, em
     email_address::EmailAddress::from_str(&address).map(|x| x.to_string())
 }
 
+#[cfg(feature = "ssr")]
+pub(crate) fn push_check_aliases_owner(query: &mut QueryBuilder<'_, sqlx::Sqlite>, username: String) {
+    query.push(" ( owner = ");
+    query.push_bind(username.clone());
+    query.push(
+        " OR owner IN ( \
+        SELECT address from mailboxes WHERE owner = ",
+    );
+    query.push_bind(username.clone());
+    query.push(" ) )");
+}
+
 #[server]
 pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
 
     let AliasQuery { sort, range, search } = query;
 
     let mut query = QueryBuilder::new("SELECT * FROM aliases WHERE 1=1");
     if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
+        query.push(" AND");
+        push_check_aliases_owner(&mut query, user.username.clone());
     }
     if !search.is_empty() {
         query.push(" AND ( address LIKE concat('%', ");
@@ -89,14 +99,12 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
 
 #[server]
 pub async fn alias_count() -> Result<usize, ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
 
     let mut query = QueryBuilder::new("SELECT COUNT(*) FROM aliases");
     if !user.admin {
-        query.push(" WHERE owner = ");
-        query.push_bind(&user.username);
+        query.push(" WHERE");
+        push_check_aliases_owner(&mut query, user.username.clone());
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -107,17 +115,15 @@ pub async fn alias_count() -> Result<usize, ServerFnError> {
 
 #[server]
 pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
 
     let mut query = QueryBuilder::new("DELETE FROM aliases WHERE address = ");
     query.push_bind(address);
 
     // Non-admins can only delete their own aliases
     if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
+        query.push(" AND");
+        push_check_aliases_owner(&mut query, user.username.clone());
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -137,19 +143,11 @@ pub async fn create_or_update_alias(
 ) -> Result<(), ServerFnError> {
     use crate::mailboxes::allowed_targets;
 
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
     let pool = crate::database::ssr::pool()?;
 
-    // Only admins can assign other owners
-    let owner = if user.admin { owner.trim() } else { &user.username };
-    // Empty owner -> self owned
-    let owner = if owner.is_empty() { &user.username } else { owner };
-    // TODO verify domain existence
-
     let target = if target.is_empty() || !user.admin {
-        if user.mailbox {
+        if user.mailbox_owner.is_some() {
             &user.username
         } else {
             if !allowed_targets().await?.contains(&target) {
@@ -160,6 +158,20 @@ pub async fn create_or_update_alias(
     } else {
         &target
     };
+
+    let owner = if user.admin {
+        // Only admins can assign other owners
+        owner.trim()
+    } else if user.mailbox_owner.is_some() {
+        // Mailbox users cannot change the owner
+        &user.username
+    } else {
+        // Normal users must use the target as an owner
+        &target
+    };
+
+    // Empty owner -> self owned
+    let owner = if owner.is_empty() { &user.username } else { owner };
 
     // Check if address is valid
     let address = validate_email(&alias, &domain)?;
@@ -178,8 +190,8 @@ pub async fn create_or_update_alias(
         query.push(" WHERE address = ");
         query.push_bind(old_address);
         if !user.admin {
-            query.push(" AND owner = ");
-            query.push_bind(&user.username);
+            query.push(" AND");
+            push_check_aliases_owner(&mut query, user.username.clone());
         }
 
         query.build().execute(&pool).await.map(|_| ())?;
@@ -200,18 +212,16 @@ pub async fn create_or_update_alias(
 
 #[server]
 pub async fn update_alias_active(address: String, active: bool) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
     let mut query = QueryBuilder::new("UPDATE aliases SET active = ");
     query.push_bind(active);
     query.push(" WHERE address = ");
     query.push_bind(address);
 
-    // Non-admins can only change their own domains
+    // Non-admins can only change their own aliases
     if !user.admin {
-        query.push(" AND owner = ");
-        query.push_bind(&user.username);
+        query.push(" AND");
+        push_check_aliases_owner(&mut query, user.username.clone());
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -301,12 +311,22 @@ pub fn Aliases(user: User) -> impl IntoView {
     let (edit_modal_input_active, set_edit_modal_input_active) = create_signal(true);
     let (edit_modal_input_owner, set_edit_modal_input_owner) = create_signal("".to_string());
 
+    if !user.admin && user.mailbox_owner.is_none() {
+        // Non-admin users that are not mailboxes always need to use the
+        // target as the owner
+        create_effect(move |_| {
+            set_edit_modal_input_owner(edit_modal_input_target());
+        });
+    }
+
     let username = user.username.clone();
+    let is_mailbox = user.mailbox_owner.is_some();
     let edit_modal_open_with = Callback::new(move |edit_alias: Option<Alias>| {
         refresh_domains();
         refresh_targets();
         edit_modal_alias.set(Some(edit_alias.clone()));
 
+        let allowed_targets = allowed_targets.get();
         let allowed_domains = allowed_domains.get();
         if let Some(edit_alias) = edit_alias {
             let (alias, domain) = match edit_alias.address.split_once('@') {
@@ -332,10 +352,12 @@ pub fn Aliases(user: User) -> impl IntoView {
             if !allowed_domains.contains(&edit_modal_input_domain()) {
                 set_edit_modal_input_domain(allowed_domains.first().cloned().unwrap_or("".to_string()));
             }
-            if user.mailbox {
+            if is_mailbox {
                 set_edit_modal_input_target(username.clone());
             } else {
-                set_edit_modal_input_target("".to_string());
+                if !allowed_targets.contains(&edit_modal_input_target()) {
+                    set_edit_modal_input_target(allowed_targets.first().cloned().unwrap_or("".to_string()));
+                }
             }
             set_edit_modal_input_comment("".to_string());
             set_edit_modal_input_active(true);
@@ -418,10 +440,10 @@ pub fn Aliases(user: User) -> impl IntoView {
     let errors = create_memo(move |_| {
         let mut errors = Vec::<String>::new();
         if let Err(e) = validate_email(&edit_modal_input_alias(), &edit_modal_input_domain()) {
-            errors.push(format!("invalid alias address: {}", e.to_string()));
+            errors.push(format!("invalid alias address: {}", e));
         }
         if let Err(e) = email_address::EmailAddress::from_str(&edit_modal_input_target()) {
-            errors.push(format!("invalid target address: {}", e.to_string()));
+            errors.push(format!("invalid target address: {}", e));
         }
         errors
     });
@@ -548,14 +570,14 @@ pub fn Aliases(user: User) -> impl IntoView {
                     Target
                 </label>
 
-                {if user.admin || user.mailbox {
+                {if user.admin || user.mailbox_owner.is_some() {
                     view! {
                         <input
                             class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             class=("!ring-4", has_invalid_target)
                             class=("!ring-red-500", has_invalid_target)
                             type="email"
-                            placeholder=if user.mailbox {
+                            placeholder=if user.mailbox_owner.is_some() {
                                 user.username.clone()
                             } else {
                                 "target@example.com".to_string()
@@ -605,7 +627,7 @@ pub fn Aliases(user: User) -> impl IntoView {
                 <input
                     class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
-                    placeholder=user.username.clone()
+                    placeholder=edit_modal_input_owner
                     on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
                     prop:value=edit_modal_input_owner
                     disabled=!user.admin

@@ -10,8 +10,8 @@ pub struct User {
     pub username: String,
     /// The associated password hash
     pub password_hash: String,
-    /// Whether the user is a mailbox
-    pub mailbox: bool,
+    /// The owner of this mailbox, or None if this is not a mailbox account
+    pub mailbox_owner: Option<String>,
     /// Whether the user is an admin
     pub admin: bool,
     /// Whether the user is active
@@ -31,9 +31,9 @@ pub mod ssr {
     impl User {
         pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
             let user = sqlx::query_as::<_, User>(
-                "SELECT username, password_hash, FALSE AS mailbox, admin, active \
+                "SELECT username, password_hash, NULL AS mailbox_owner, admin, active \
                 FROM users WHERE username = $1 \
-                UNION SELECT address AS username, password_hash, TRUE AS mailbox, FALSE AS admin, active \
+                UNION SELECT address AS username, password_hash, owner AS mailbox_owner, FALSE AS admin, active \
                 FROM mailboxes WHERE address = $1",
             )
             .bind(username)
@@ -93,6 +93,23 @@ pub async fn auth_admin() -> Result<User, ServerFnError> {
     Ok(user)
 }
 
+/// Get the current user and ensure that it is not a mailbox
+#[server]
+pub async fn auth_user() -> Result<User, ServerFnError> {
+    let user = get_user().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    if user.mailbox_owner.is_some() {
+        return Err(ServerFnError::new("Unauthorized"));
+    }
+
+    Ok(user)
+}
+
+/// Get the current user, regardless of whether it is an admin, user or mailbox
+#[server]
+pub async fn auth_any() -> Result<User, ServerFnError> {
+    get_user().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))
+}
+
 #[server]
 pub async fn authenticate_user(username: String, password: String) -> Result<User, ServerFnError> {
     use argon2::{
@@ -104,22 +121,23 @@ pub async fn authenticate_user(username: String, password: String) -> Result<Use
     let generic_err = || ServerFnError::new("Wrong password or invalid user.");
 
     let pool = crate::database::ssr::pool()?;
-    let user = User::get(&username, &pool)
-        .await
-        .ok_or_else(generic_err)?;
+    let user = User::get(&username, &pool).await.ok_or_else(generic_err)?;
 
     let verify_result = PasswordHash::new(&user.password_hash)
         .and_then(|hash| Argon2::default().verify_password(password.as_bytes(), &hash));
     if verify_result.is_ok() {
         if !user.active {
             log::warn!("denying successful login attempt because user '{username}' is inactive");
-            return Err(generic_err())
+            return Err(generic_err());
         }
 
         log::info!("login successful for user '{username}'");
         Ok(user)
     } else {
-        log::warn!("failed authentication of user '{username}': {}", verify_result.unwrap_err());
+        log::warn!(
+            "failed authentication of user '{username}': {}",
+            verify_result.unwrap_err()
+        );
         Err(generic_err())
     }
 }
