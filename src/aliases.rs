@@ -98,7 +98,7 @@ pub async fn list_aliases(query: AliasQuery) -> Result<Vec<Alias>, ServerFnError
 
 /// Count all aliases, or just active/inactive ones if specified.
 #[server]
-pub async fn alias_count(active: Option<bool>) -> Result<usize, ServerFnError> {
+pub async fn alias_count(active: Option<bool>, since: Option<DateTime<Utc>>) -> Result<usize, ServerFnError> {
     let user = crate::auth::auth_any().await?;
 
     let mut query = QueryBuilder::new("SELECT COUNT(*) FROM aliases WHERE 1=1");
@@ -106,7 +106,12 @@ pub async fn alias_count(active: Option<bool>) -> Result<usize, ServerFnError> {
         push_and_check_aliases_owner(&mut query, user.username.clone());
     }
     if let Some(active) = active {
-        query.push(format!(" AND active = {}", if active { "TRUE" } else { "FALSE" }));
+        query.push(" AND active = ");
+        query.push_bind(active);
+    }
+    if let Some(since) = since {
+        query.push(" AND created_at >=");
+        query.push_bind(since);
     }
 
     let pool = crate::database::ssr::pool()?;
@@ -250,7 +255,7 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
     }
 
     async fn row_count(&self) -> Option<usize> {
-        alias_count(None).await.ok()
+        alias_count(None, None).await.ok()
     }
 
     fn set_sorting(&mut self, sorting: &VecDeque<(usize, ColumnSort)>) {

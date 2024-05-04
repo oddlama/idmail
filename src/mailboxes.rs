@@ -235,13 +235,20 @@ impl TableDataProvider<Mailbox> for MailboxTableDataProvider {
 }
 
 #[component]
-pub fn Mailboxes(user: User) -> impl IntoView {
+pub fn Mailboxes(user: User, reload_stats: Callback<()>) -> impl IntoView {
     let mut rows = MailboxTableDataProvider::default();
     let default_sorting = VecDeque::from([(3, ColumnSort::Descending)]);
     rows.set_sorting(&default_sorting);
     let sorting = create_rw_signal(default_sorting);
 
+    let reload = create_trigger();
     let reload_controller = ReloadController::default();
+    create_effect(move |_| {
+        reload.track();
+        reload_controller.reload();
+        reload_stats(());
+    });
+
     let on_input = use_debounce_fn_with_arg(move |value| rows.search.set(value), 300.0);
     let (count, set_count) = create_signal(0);
 
@@ -317,7 +324,7 @@ pub fn Mailboxes(user: User) -> impl IntoView {
             {
                 on_error(e.to_string())
             } else {
-                reload_controller.reload();
+                reload.notify();
                 edit_modal_mailbox.set(None);
             }
         });
@@ -328,7 +335,7 @@ pub fn Mailboxes(user: User) -> impl IntoView {
             if let Err(e) = update_mailbox_active(ev.changed_row.address.clone(), ev.changed_row.active).await {
                 error!("Failed to update active status of {}: {}", ev.changed_row.address, e);
             }
-            reload_controller.reload();
+            reload.notify();
         });
     };
 
@@ -449,7 +456,7 @@ pub fn Mailboxes(user: User) -> impl IntoView {
                     if let Err(e) = delete_mailbox(data).await {
                         error!("Failed to delete mailbox: {}", e);
                     } else {
-                        reload_controller.reload();
+                        reload.notify();
                     }
                     delete_modal_mailbox.set(None);
                 });

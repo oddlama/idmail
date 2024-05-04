@@ -5,6 +5,7 @@ use crate::{
     mailboxes::Mailboxes,
     users::{AccountSettings, Users},
 };
+use chrono::{Months, Utc};
 use leptos::{html::Div, *};
 use leptos_icons::Icon;
 use leptos_meta::{provide_meta_context, Link, Stylesheet, Title};
@@ -142,10 +143,14 @@ pub fn Tab(
         OnClickOutsideOptions::default().ignore(["#account-button"]),
     );
 
-    let all_alias_count = create_resource(|| (), |_| async move { alias_count(None).await });
-    let inactive_alias_count = create_resource(|| (), |_| async move { alias_count(Some(false)).await });
+    let active_alias_count = create_resource(|| (), |_| async move { alias_count(Some(true), None).await });
+    let inactive_alias_count = create_resource(|| (), |_| async move { alias_count(Some(false), None).await });
+    let new_since_last_month = create_resource(
+        || (),
+        |_| async move { alias_count(None, Some(Utc::now() - Months::new(1))).await },
+    );
     let reload_stats = Callback::new(move |_: ()| {
-        all_alias_count.refetch();
+        active_alias_count.refetch();
         inactive_alias_count.refetch();
     });
 
@@ -258,26 +263,26 @@ pub fn Tab(
                                 </div>
                                 <div class="overflow-hidden bg-background px-4 md:px-12">
                                     <Show when=move || tab != Tab::AccountSettings>
-                                        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <div class="grid gap-4 lg:grid-cols-3">
                                             <div class="rounded-xl border-[1.5px]">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
-                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                    <Icon icon=icondata::TbMailForward class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">
                                                         <Transition fallback=move || {
                                                             view! { <p class="animate-pulse">"..."</p> }
                                                         }>
-                                                            {move || match all_alias_count.get() {
+                                                            {move || match active_alias_count.get() {
                                                                 Some(Ok(count)) => view! { {count} }.into_view(),
                                                                 _ => view! {}.into_view(),
                                                             }}
+                                                            " active"
 
                                                         </Transition>
                                                     </div>
                                                     <p class="text-xs text-muted-foreground">
-                                                        "including "
                                                         <Transition fallback=move || {
                                                             view! { <span class="animate-pulse">"..."</span> }
                                                         }>
@@ -285,25 +290,25 @@ pub fn Tab(
                                                                 Some(Ok(count)) => view! { {count} }.into_view(),
                                                                 _ => view! {}.into_view(),
                                                             }}
-
-                                                        </Transition> " inactive aliases"
+                                                            " inactive, "
+                                                        </Transition>
+                                                        <Transition fallback=move || {
+                                                            view! { <span class="animate-pulse">"..."</span> }
+                                                        }>
+                                                            "+"
+                                                            {move || match new_since_last_month.get() {
+                                                                Some(Ok(count)) => view! { {count} }.into_view(),
+                                                                _ => view! {}.into_view(),
+                                                            }}
+                                                            " new last month"
+                                                        </Transition>
                                                     </p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px]">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <h3 class="tracking-tight text-sm font-medium">Mailboxes</h3>
-                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
-                                                </div>
-                                                <div class="p-4 pt-0">
-                                                    <div class="text-2xl font-bold">+2350</div>
-                                                    <p class="text-xs text-muted-foreground">+180.1% from last month</p>
-                                                </div>
-                                            </div>
-                                            <div class="rounded-xl border-[1.5px]">
-                                                <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
-                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                    <Icon icon=icondata::BsArrowDown class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+12,234</div>
@@ -313,7 +318,7 @@ pub fn Tab(
                                             <div class="rounded-xl border-[1.5px]">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
-                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                    <Icon icon=icondata::BsArrowUp class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+573</div>
@@ -325,7 +330,7 @@ pub fn Tab(
 
                                     {match tab {
                                         Tab::Aliases => view! { <Aliases user=user.clone() reload_stats/> }.into_view(),
-                                        Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
+                                        Tab::Mailboxes => view! { <Mailboxes user=user.clone() reload_stats/> }.into_view(),
                                         Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
                                         Tab::Users => view! { <Users/> }.into_view(),
                                         Tab::AccountSettings => {
