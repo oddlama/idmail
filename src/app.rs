@@ -144,7 +144,7 @@ pub fn Tab(
 
                                         <div
                                             node_ref=account_dropdown
-                                            class="z-10 bg-white divide-y divide-gray-100 rounded-lg border-[1.5px] min-w-44 max-w-80 hidden absolute top-6 right-0"
+                                            class="z-10 bg-white divide-y-[1.5px] rounded-lg border-[1.5px] min-w-44 max-w-80 hidden absolute top-6 right-0"
                                             class=("!block", show_account_dropdown)
                                         >
                                             <div class="px-4 py-3 text-sm text-gray-900">

@@ -27,7 +27,6 @@ pub mod ssr {
     pub use std::collections::HashSet;
     pub type AuthSession = axum_session_auth::AuthSession<User, String, SessionSqlitePool, SqlitePool>;
     pub use async_trait::async_trait;
-    pub use bcrypt::{hash, verify, DEFAULT_COST};
 
     impl User {
         pub async fn get(username: &str, pool: &SqlitePool) -> Option<Self> {
@@ -96,18 +95,33 @@ pub async fn auth_admin() -> Result<User, ServerFnError> {
 
 #[server]
 pub async fn authenticate_user(username: String, password: String) -> Result<User, ServerFnError> {
+    use argon2::{
+        password_hash::{PasswordHash, PasswordVerifier},
+        Argon2,
+    };
+
+    // A generic error message to not leak information to the clients
+    let generic_err = || ServerFnError::new("Wrong password or invalid user.");
+
     let pool = crate::database::ssr::pool()?;
     let user = User::get(&username, &pool)
         .await
-        .ok_or_else(|| ServerFnError::new("Wrong password or invalid user"))?;
+        .ok_or_else(generic_err)?;
 
-    // TODO match bcrypt::verify(password, &user.password)? {
-    // TODO     true => {
-    // TODO         Ok(user)
-    // TODO     }
-    // TODO     false => Err(ServerFnError::new("Wrong password or invalid user.")),
-    // TODO }
-    Ok(user)
+    let verify_result = PasswordHash::new(&user.password_hash)
+        .and_then(|hash| Argon2::default().verify_password(password.as_bytes(), &hash));
+    if verify_result.is_ok() {
+        if !user.active {
+            log::warn!("denying successful login attempt because user '{username}' is inactive");
+            return Err(generic_err())
+        }
+
+        log::info!("login successful for user '{username}'");
+        Ok(user)
+    } else {
+        log::warn!("failed authentication of user '{username}': {}", verify_result.unwrap_err());
+        Err(generic_err())
+    }
 }
 
 #[server]

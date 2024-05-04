@@ -68,7 +68,8 @@ async fn main() -> Result<()> {
 
     // Auth section
     let session_config = SessionConfig::default().with_table_name("axum_sessions");
-    let auth_config = AuthConfig::<String>::default();
+    // Disable user caching
+    let auth_config = AuthConfig::<String>::default().set_cache(false);
     let session_store =
         SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config).await?;
 

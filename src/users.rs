@@ -99,7 +99,21 @@ pub(crate) fn mk_password_hash(password: &str) -> Result<String, ServerFnError> 
         return Err(ServerFnError::new("Password is invalid."));
     }
 
-    Ok("".to_string())
+    use argon2::{
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+        Argon2,
+    };
+
+    let salt = SaltString::generate(&mut OsRng);
+    // Argon2 with default params (Argon2id v19)
+    let argon2 = Argon2::default();
+    // Hash password to PHC string ($argon2id$v=19$...)
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|e| ServerFnError::new(e.to_string()))?
+        .to_string();
+
+    Ok(password_hash)
 }
 
 #[server]
