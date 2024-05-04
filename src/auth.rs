@@ -94,35 +94,31 @@ pub async fn auth_admin() -> Result<User, ServerFnError> {
     Ok(user)
 }
 
-/// Ensure that the user is logged in
 #[server]
-pub async fn auth_any_user() -> Result<User, ServerFnError> {
-    let user = get_user().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+pub async fn authenticate_user(username: String, password: String) -> Result<User, ServerFnError> {
+    let pool = crate::database::ssr::pool()?;
+    let user = User::get(&username, &pool)
+        .await
+        .ok_or_else(|| ServerFnError::new("Wrong password or invalid user"))?;
+
+    // TODO match bcrypt::verify(password, &user.password)? {
+    // TODO     true => {
+    // TODO         Ok(user)
+    // TODO     }
+    // TODO     false => Err(ServerFnError::new("Wrong password or invalid user.")),
+    // TODO }
     Ok(user)
 }
 
 #[server]
 pub async fn login(username: String, password: String) -> Result<(), ServerFnError> {
-    let pool = crate::database::ssr::pool()?;
+    let user = authenticate_user(username.clone(), password.clone()).await?;
     let auth = crate::database::ssr::auth()?;
-
-    let user = User::get(&username, &pool)
-        .await
-        .ok_or_else(|| ServerFnError::new("Wrong password or invalid user"))?;
 
     auth.login_user(user.username);
     auth.remember_user(false);
     leptos_axum::redirect("/");
     Ok(())
-    // TODO match bcrypt::verify(password, &user.password)? {
-    // TODO     true => {
-    // TODO         auth.login_user(user.username);
-    // TODO         auth.remember_user(false);
-    // TODO         leptos_axum::redirect("/");
-    // TODO         Ok(())
-    // TODO     }
-    // TODO     false => Err(ServerFnError::ServerError("Password does not match.".to_string())),
-    // TODO }
 }
 
 #[server]

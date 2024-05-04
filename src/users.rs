@@ -98,6 +98,27 @@ pub(crate) fn mk_password_hash(password: &str) -> Result<String, ServerFnError> 
 }
 
 #[server]
+pub async fn change_password(current_password: String, new_password: String) -> Result<(), ServerFnError> {
+    let user = crate::auth::get_user()
+        .await?
+        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+
+    // Reauthenticate
+    let _ = crate::auth::authenticate_user(user.username.clone(), current_password.clone()).await?;
+
+    let password_hash = mk_password_hash(&new_password)?;
+    let mut query = QueryBuilder::new("UPDATE users SET password_hash = ");
+    query.push_bind(password_hash);
+    query.push(" WHERE username = ");
+    query.push_bind(&user.username);
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
+
+    Ok(())
+}
+
+#[server]
 pub async fn create_or_update_user(
     old_username: Option<String>,
     username: String,
@@ -473,6 +494,128 @@ pub fn Users() -> impl IntoView {
                 >
                     Active
                 </label>
+            </div>
+        </EditModal>
+    }
+}
+
+#[component]
+pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
+    let edit_modal_password = create_rw_signal(None);
+
+    let (edit_modal_input_current_password, set_edit_modal_input_current_password) = create_signal("".to_string());
+    let (edit_modal_input_password, set_edit_modal_input_password) = create_signal("".to_string());
+    let (edit_modal_input_password_repeat, set_edit_modal_input_password_repeat) = create_signal("".to_string());
+    let edit_modal_open = move || {
+        edit_modal_password.set(Some(Some(())));
+        set_edit_modal_input_current_password("".to_string());
+        set_edit_modal_input_password("".to_string());
+        set_edit_modal_input_password_repeat("".to_string());
+    };
+
+    let on_edit = move |(_data, on_error): (Option<()>, Callback<String>)| {
+        spawn_local(async move {
+            if let Err(e) = change_password(
+                edit_modal_input_current_password.get_untracked(),
+                edit_modal_input_password.get_untracked(),
+            )
+            .await
+            {
+                on_error(e.to_string())
+            } else {
+                edit_modal_password.set(None);
+            }
+        });
+    };
+
+    let has_password_mismatch = move || edit_modal_input_password() != edit_modal_input_password_repeat();
+    let has_invalid_password = create_memo(move |_| !is_valid_pw(&edit_modal_input_password()));
+    let errors = create_memo(move |_| {
+        let mut errors = Vec::new();
+        if has_password_mismatch() {
+            errors.push("Passwords don't match".to_string());
+        }
+        if has_invalid_password() {
+            errors.push("Password must be between 12 and 512 characters".to_string());
+        }
+        errors
+    });
+
+    view! {
+        <div class="h-full flex-1 flex-col mt-12">
+            <div class="flex items-center justify-between space-y-2">
+                <h2 class="text-4xl font-bold">Account Settings</h2>
+            </div>
+            <div class="text-xl mb-4">{user.username.clone()}</div>
+            <div class="space-y-4">
+                <button
+                    type="button"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                    on:click=move |_| edit_modal_open()
+                >
+                    "Change password"
+                </button>
+            </div>
+        </div>
+
+        <EditModal
+            data=edit_modal_password
+            what="Password".to_string()
+            get_title=move |_| { "password" }
+            on_confirm=on_edit
+            errors
+        >
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="password"
+                >
+                    "Current Password"
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    type="password"
+                    required="required"
+                    maxlength="1024"
+                    on:input=move |ev| set_edit_modal_input_current_password(event_target_value(&ev))
+                    prop:value=edit_modal_input_current_password
+                />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="password"
+                >
+                    "Password"
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class=("!ring-4", has_invalid_password)
+                    class=("!ring-red-500", has_invalid_password)
+                    type="password"
+                    required="required"
+                    maxlength="1024"
+                    on:input=move |ev| set_edit_modal_input_password(event_target_value(&ev))
+                    prop:value=edit_modal_input_password
+                />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label
+                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    for="password_2"
+                >
+                    Repeat Password
+                </label>
+                <input
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class=("!ring-4", has_password_mismatch)
+                    class=("!ring-red-500", has_password_mismatch)
+                    type="password"
+                    required="required"
+                    maxlength="1024"
+                    on:input=move |ev| set_edit_modal_input_password_repeat(event_target_value(&ev))
+                    prop:value=edit_modal_input_password_repeat
+                />
             </div>
         </EditModal>
     }

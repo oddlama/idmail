@@ -3,7 +3,7 @@ use crate::{
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
-    users::Users,
+    users::{Users, AccountSettings},
 };
 use leptos::{html::Div, *};
 use leptos_icons::Icon;
@@ -17,6 +17,7 @@ pub enum Tab {
     Mailboxes,
     Domains,
     Users,
+    AccountSettings,
 }
 
 #[component]
@@ -34,10 +35,12 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="/" view=move || view! { <Redirect path="/login"/> }/>
                     <Route path="/login" view=move || view! { <LoginView login logout/> }/>
+
                     <Route path="/aliases" view=move || view! { <Tab login logout tab=Tab::Aliases/> }/>
                     <Route path="/mailboxes" view=move || view! { <Tab login logout tab=Tab::Mailboxes/> }/>
                     <Route path="/domains" view=move || view! { <Tab login logout tab=Tab::Domains/> }/>
                     <Route path="/users" view=move || view! { <Tab login logout tab=Tab::Users/> }/>
+                    <Route path="/account" view=move || view! { <Tab login logout tab=Tab::AccountSettings/> }/>
                 </Routes>
             </main>
         </Router>
@@ -121,6 +124,7 @@ pub fn Tab(
                                                 toggle_show_account_dropdown();
                                             }
                                         >
+
                                             {user.username.clone()}
                                             <svg
                                                 class="w-2.5 h-2.5 ms-3"
@@ -159,7 +163,7 @@ pub fn Tab(
                                             <ul class="py-2 text-sm text-gray-700">
                                                 <li>
                                                     <A
-                                                        href="/settings"
+                                                        href="/account"
                                                         class="block px-4 py-2 w-full text-sm text-left text-gray-700 hover:bg-gray-100"
                                                     >
                                                         "Settings"
@@ -180,54 +184,59 @@ pub fn Tab(
                                     </div>
                                 </div>
                                 <div class="overflow-hidden bg-background px-4 md:px-12">
-                                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                        <div class="rounded-xl border-[1.5px]">
-                                            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
-                                                <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                    <Show when=move || tab != Tab::AccountSettings>
+                                        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                            <div class="rounded-xl border-[1.5px]">
+                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
+                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                </div>
+                                                <div class="p-6 pt-0">
+                                                    <div class="text-2xl font-bold">1412</div>
+                                                    <p class="text-xs text-muted-foreground">+20.1% from last month</p>
+                                                </div>
                                             </div>
-                                            <div class="p-6 pt-0">
-                                                <div class="text-2xl font-bold">1412</div>
-                                                <p class="text-xs text-muted-foreground">+20.1% from last month</p>
+                                            <div class="rounded-xl border-[1.5px]">
+                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <h3 class="tracking-tight text-sm font-medium">Mailboxes</h3>
+                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                </div>
+                                                <div class="p-6 pt-0">
+                                                    <div class="text-2xl font-bold">+2350</div>
+                                                    <p class="text-xs text-muted-foreground">+180.1% from last month</p>
+                                                </div>
+                                            </div>
+                                            <div class="rounded-xl border-[1.5px]">
+                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
+                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                </div>
+                                                <div class="p-6 pt-0">
+                                                    <div class="text-2xl font-bold">+12,234</div>
+                                                    <p class="text-xs text-muted-foreground">+19% from last month</p>
+                                                </div>
+                                            </div>
+                                            <div class="rounded-xl border-[1.5px]">
+                                                <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
+                                                    <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
+                                                </div>
+                                                <div class="p-6 pt-0">
+                                                    <div class="text-2xl font-bold">+573</div>
+                                                    <p class="text-xs text-muted-foreground">+201 since last hour</p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="rounded-xl border-[1.5px]">
-                                            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <h3 class="tracking-tight text-sm font-medium">Mailboxes</h3>
-                                                <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
-                                            </div>
-                                            <div class="p-6 pt-0">
-                                                <div class="text-2xl font-bold">+2350</div>
-                                                <p class="text-xs text-muted-foreground">+180.1% from last month</p>
-                                            </div>
-                                        </div>
-                                        <div class="rounded-xl border-[1.5px]">
-                                            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
-                                                <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
-                                            </div>
-                                            <div class="p-6 pt-0">
-                                                <div class="text-2xl font-bold">+12,234</div>
-                                                <p class="text-xs text-muted-foreground">+19% from last month</p>
-                                            </div>
-                                        </div>
-                                        <div class="rounded-xl border-[1.5px]">
-                                            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
-                                                <Icon icon=icondata::FiLogOut class="w-4 h-4"/>
-                                            </div>
-                                            <div class="p-6 pt-0">
-                                                <div class="text-2xl font-bold">+573</div>
-                                                <p class="text-xs text-muted-foreground">+201 since last hour</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </Show>
 
                                     {match tab {
                                         Tab::Aliases => view! { <Aliases user=user.clone()/> }.into_view(),
                                         Tab::Mailboxes => view! { <Mailboxes user=user.clone()/> }.into_view(),
                                         Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
                                         Tab::Users => view! { <Users/> }.into_view(),
+                                        Tab::AccountSettings => {
+                                            view! { <AccountSettings user=user.clone()/> }.into_view()
+                                        }
                                     }}
 
                                 </div>
