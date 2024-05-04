@@ -5,10 +5,11 @@ use crate::{
     mailboxes::Mailboxes,
     users::Users,
 };
-use leptos::*;
+use leptos::{html::Div, *};
 use leptos_icons::Icon;
 use leptos_meta::{provide_meta_context, Link, Stylesheet};
-use leptos_router::{Redirect, Route, Router, Routes, A};
+use leptos_router::{ActionForm, Redirect, Route, Router, Routes, A};
+use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Tab {
@@ -64,6 +65,17 @@ pub fn Tab(
         }
     };
 
+    let account_dropdown = create_node_ref::<Div>();
+    let (show_account_dropdown, set_show_account_dropdown) = create_signal(false);
+    let toggle_show_account_dropdown = move || set_show_account_dropdown.update(|val| *val = !*val);
+    let _ = on_click_outside_with_options(
+        account_dropdown,
+        move |_event| {
+            set_show_account_dropdown(false);
+        },
+        OnClickOutsideOptions::default().ignore(["#account-button"]),
+    );
+
     view! {
         <Transition fallback=move || {
             view! { <span class="text-gray-300">"Loading..."</span> }
@@ -98,10 +110,73 @@ pub fn Tab(
                                             </Show>
                                         </div>
                                     </div>
-                                    <div class="flex flex-row items-center w-full sm:w-auto">
+                                    <div class="flex flex-row items-center w-full sm:w-auto relative">
                                         <div class="flex-1 sm:flex-none"></div>
-                                        <span class="text-base mr-4">{user.username.clone()}</span>
-                                        <Logout action=logout/>
+
+                                        <button
+                                            id="account-button"
+                                            type="button"
+                                            class="flex items-center text-sm pe-1 font-medium text-gray-900 rounded-lg hover:text-indigo-600 md:me-0"
+                                            on:click=move |_ev| {
+                                                toggle_show_account_dropdown();
+                                            }
+                                        >
+                                            {user.username.clone()}
+                                            <svg
+                                                class="w-2.5 h-2.5 ms-3"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 10 6"
+                                            >
+                                                <path
+                                                    stroke="currentColor"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="m1 1 4 4 4-4"
+                                                ></path>
+                                            </svg>
+                                        </button>
+
+                                        <div
+                                            node_ref=account_dropdown
+                                            class="z-10 bg-white divide-y divide-gray-100 rounded-lg border-[1.5px] min-w-44 max-w-80 hidden absolute top-6 right-0"
+                                            class=("!block", show_account_dropdown)
+                                        >
+                                            <div class="px-4 py-3 text-sm text-gray-900">
+                                                <div class="font-medium">
+                                                    {if user.admin {
+                                                        "Admin"
+                                                    } else if user.mailbox {
+                                                        "Mailbox"
+                                                    } else {
+                                                        "User"
+                                                    }}
+
+                                                </div>
+                                                <div class="truncate">{user.username.clone()}</div>
+                                            </div>
+                                            <ul class="py-2 text-sm text-gray-700">
+                                                <li>
+                                                    <A
+                                                        href="/settings"
+                                                        class="block px-4 py-2 w-full text-sm text-left text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        "Settings"
+                                                    </A>
+                                                </li>
+                                            </ul>
+                                            <div class="py-2">
+                                                <ActionForm action=logout>
+                                                    <button
+                                                        type="submit"
+                                                        class="block px-4 py-2 w-full text-sm text-left text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        "Sign Out"
+                                                    </button>
+                                                </ActionForm>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="overflow-hidden bg-background px-4 md:px-12">

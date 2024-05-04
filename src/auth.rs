@@ -228,21 +228,6 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
 }
 
 #[component]
-pub fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
-    view! {
-        <ActionForm action=action>
-            <button
-                type="submit"
-                class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-transparent border-[1.5px] border-gray-200 hover:bg-gray-200 focus:ring-ring"
-            >
-                <Icon icon=icondata::FiLogOut class="w-6 h-6 me-2"/>
-                "Log Out"
-            </button>
-        </ActionForm>
-    }
-}
-
-#[component]
 pub fn LoginView(
     login: Action<Login, Result<(), ServerFnError>>,
     logout: Action<Logout, Result<(), ServerFnError>>,
