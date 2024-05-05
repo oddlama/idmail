@@ -167,10 +167,7 @@ pub fn Tab(
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
                                     <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
                                         <A href="/aliases" class="flex flex-row items-center mb-4 sm:mb-0">
-                                            <h2 class="text-4xl leading-none font-bold bg-gradient-to-br from-purple-600 to-blue-500 inline-block text-transparent bg-clip-text">
-                                                idmail
-                                            </h2>
-                                            <Icon icon=icondata::IoMail class="ml-1 w-6 h-6"/>
+                                            <img class="h-9" src="/logo-with-text.svg" />
                                         </A>
                                         <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
                                             <A href="/aliases" class=class_for(Tab::Aliases)>

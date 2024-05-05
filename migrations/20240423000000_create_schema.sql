@@ -39,10 +39,34 @@ CREATE TABLE IF NOT EXISTS mailboxes (
 	-- FOREIGN KEY (owner) REFERENCES users (username) ON DELETE CASCADE
 ) WITHOUT ROWID;
 
---CREATE TABLE IF NOT EXISTS mail_events (
+--CREATE TABLE IF NOT EXISTS imap_events (
 --	id                INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
---	original_from     TEXT NOT NULL,
---	original_to       TEXT NOT NULL,
---	delivered_mailbox TEXT NOT NULL,
+--	type              TEXT NOT NULL,
+--	source_ip         TEXT,
+--	source_host       TEXT,
+--	source_rdns       TEXT,
+--	msg_id            TEXT,
+--	auth_user         TEXT,
+--	sender            TEXT,
+--	-- IMAP
+--	account_name      TEXT,
+--	rcpt_to           TEXT,
+--	original_rcpt_to  TEXT,
+--	-- GENERAL
 --	created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
---) WITHOUT ROWID;
+--);
+--
+--CREATE TABLE IF NOT EXISTS smtp_events (
+--	id            INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+--	type          TEXT NOT NULL,
+--	source_ip     TEXT,
+--	source_host   TEXT,
+--	source_rdns   TEXT,
+--	msg_id        TEXT,
+--	auth_user     TEXT,
+--	sender        TEXT,
+--	-- SMTP
+--	rcpt_to       TEXT,
+--	-- GENERAL
+--	created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+--);
