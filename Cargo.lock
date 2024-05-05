@@ -1534,6 +1534,8 @@ dependencies = [
  "console_log",
  "email_address",
  "futures",
+ "getrandom",
+ "hex",
  "http 1.1.0",
  "icondata",
  "leptos",
@@ -1556,6 +1558,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

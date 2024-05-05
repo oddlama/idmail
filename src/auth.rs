@@ -170,7 +170,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
             <div class="w-full h-screen flex items-center justify-center px-4">
                 <div class="flex flex-col mx-auto">
                     <div class="mx-auto mb-4 flex flex-row">
-                        <img class="h-9" src="/logo-with-text.svg" />
+                        <img class="h-9" src="/logo-with-text.svg"/>
                     </div>
                     <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground max-w-sm">
                         <div class="flex flex-col space-y-1.5 p-6">

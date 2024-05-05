@@ -240,6 +240,10 @@
             name = "RUST_SRC_PATH";
             value = "${rustToolchain}/lib/rustlib/src/rust/library";
           }
+          {
+            name = "RUSTFLAGS";
+            value = "--cfg=web_sys_unstable_apis";
+          }
         ];
       };
 

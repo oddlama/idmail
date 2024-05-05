@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::{
     body::Body as AxumBody,
     extract::{Path, State},
@@ -17,8 +17,8 @@ use idmail::{
 };
 use leptos::{get_configuration, provide_context};
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
-use log::info;
-use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
+use log::{info, warn};
+use sqlx::{sqlite::SqliteConnectOptions, QueryBuilder, SqlitePool};
 
 async fn server_fn_handler(
     State(app_state): State<AppState>,
@@ -74,6 +74,30 @@ async fn main() -> Result<()> {
         SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config).await?;
 
     sqlx::migrate!().run(&pool).await?;
+
+    // Create admin user if none exist
+    let admin_user_exists = QueryBuilder::new("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+        .build_query_scalar::<i64>()
+        .fetch_one(&pool)
+        .await?
+        > 0;
+    if !admin_user_exists {
+        warn!("admin user doesn't exist in database, recovering...");
+
+        let mut buf = [0u8; 24];
+        getrandom::getrandom(&mut buf)?;
+        let password = hex::encode(buf);
+
+        let password_hash = idmail::users::mk_password_hash(&password)
+            .map_err(|e| anyhow!("failed to hash password for admin user: {e}"))?;
+        sqlx::query("INSERT INTO users (username, password_hash, admin) VALUES ('admin', ?, TRUE)")
+            .bind(password_hash)
+            .execute(&pool)
+            .await
+            .map(|_| ())?;
+
+        warn!("created admin user with password '{password}'");
+    }
 
     // Setting this to None means we'll be using cargo-leptos and its env vars
     let conf = get_configuration(None).await?;

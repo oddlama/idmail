@@ -1,14 +1,15 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::utils::{DeleteModal, EditModal};
+use crate::utils::{DeleteModal, EditModal, Modal};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
 use chrono::{DateTime, Utc};
+use leptos::html::Dialog;
 use leptos::{ev::MouseEvent, logging::error, *};
 use leptos_icons::Icon;
 use leptos_struct_table::*;
-use leptos_use::use_debounce_fn_with_arg;
+use leptos_use::{use_debounce_fn_with_arg, use_timeout_fn};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::QueryBuilder;
@@ -67,6 +68,39 @@ pub async fn list_users(query: UserQuery) -> Result<Vec<User>, ServerFnError> {
 }
 
 #[server]
+pub async fn regenerate_api_key() -> Result<String, ServerFnError> {
+    let user = crate::auth::auth_any().await?;
+    if user.mailbox_owner.is_none() {
+        return Err(ServerFnError::new("Must be a mailbox user."));
+    }
+
+    let mut buf = [0u8; 24];
+    getrandom::getrandom(&mut buf)?;
+    let api_token = hex::encode(buf);
+
+    let mut query = QueryBuilder::new("UPDATE mailboxes SET api_token = ");
+    query.push_bind(&api_token);
+    query.push(" WHERE address = ");
+    query.push_bind(&user.username);
+
+    let pool = crate::database::ssr::pool()?;
+    query.build().execute(&pool).await.map(|_| ())?;
+
+    Ok(api_token)
+}
+
+#[server]
+pub async fn admin_count() -> Result<usize, ServerFnError> {
+    let _user = crate::auth::auth_admin().await?;
+    let mut query = QueryBuilder::new("SELECT COUNT(*) FROM users WHERE admin = TRUE");
+
+    let pool = crate::database::ssr::pool()?;
+    let count = query.build_query_scalar::<i64>().fetch_one(&pool).await?;
+
+    Ok(count as usize)
+}
+
+#[server]
 pub async fn user_count() -> Result<usize, ServerFnError> {
     let _user = crate::auth::auth_admin().await?;
     let mut query = QueryBuilder::new("SELECT COUNT(*) FROM users");
@@ -94,7 +128,7 @@ pub async fn delete_user(username: String) -> Result<(), ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
-pub(crate) fn mk_password_hash(password: &str) -> Result<String, ServerFnError> {
+pub fn mk_password_hash(password: &str) -> Result<String, ServerFnError> {
     if !is_valid_pw(password) {
         return Err(ServerFnError::new("Password is invalid."));
     }
@@ -118,9 +152,7 @@ pub(crate) fn mk_password_hash(password: &str) -> Result<String, ServerFnError> 
 
 #[server]
 pub async fn change_password(current_password: String, new_password: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::get_user()
-        .await?
-        .ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let user = crate::auth::auth_any().await?;
 
     // Reauthenticate
     let _ = crate::auth::authenticate_user(user.username.clone(), current_password.clone()).await?;
@@ -568,12 +600,25 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
         errors
     });
 
+    let api_token_modal = create_node_ref::<Dialog>();
+    let api_token_modal_open = create_rw_signal(false);
+    let api_token_modal_token = create_rw_signal("".to_string());
+    let api_token_modal_copied_timer = use_timeout_fn(|_: ()| (), 3000.0);
+    let (api_token_modal_server_error, api_token_modal_set_server_error) = create_signal(None);
+    create_effect(move |_| {
+        // Clear API token when dialog closes in any way
+        if !api_token_modal_open() {
+            api_token_modal_token.set("".to_string());
+            (api_token_modal_copied_timer.stop)();
+            api_token_modal_set_server_error(None);
+        }
+    });
+
     view! {
         <div class="h-full flex-1 flex-col mt-12">
-            <div class="flex items-center justify-between space-y-2">
+            <div class="flex items-center justify-between space-y-2 mb-4">
                 <h2 class="text-4xl font-bold">Account Settings</h2>
             </div>
-            <div class="text-xl mb-4">{user.username.clone()}</div>
             <div class="space-y-4">
                 <button
                     type="button"
@@ -581,6 +626,25 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                     on:click=move |_| edit_modal_open()
                 >
                     "Change password"
+                </button>
+            </div>
+            <div class="space-y-4">
+                <button
+                    type="button"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    on:click=move |_| {
+                        spawn_local(async move {
+                            match regenerate_api_key().await {
+                                Err(e) => api_token_modal_set_server_error(Some(e.to_string())),
+                                Ok(api_token) => api_token_modal_token.set(api_token),
+                            }
+                            api_token_modal_open.set(true)
+                        });
+                    }
+
+                    disabled=user.mailbox_owner.is_none()
+                >
+                    "Regenerate API Token"
                 </button>
             </div>
         </div>
@@ -645,5 +709,78 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                 />
             </div>
         </EditModal>
+
+        <Modal open=api_token_modal_open dialog_el=api_token_modal>
+            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all sm:w-full sm:max-w-xl">
+                <h3 class="text-2xl tracking-tight mt-2 mb-2 font-semibold text-gray-900">"API Token"</h3>
+                <div class="pb-3 space-y-3">
+                    <p class="text-sm text-gray-500">
+                        "Your new API Token is displayed below. Make sure to save it now, as it will not be displayed again."
+                    </p>
+                    <div class="w-full relative">
+                        <input
+                            type="text"
+                            class="col-span-6 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full px-2.5 py-4"
+                            value=move || api_token_modal_token
+                            disabled
+                            readonly
+                        />
+                        <button
+                            class="absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-900 hover:bg-gray-100 rounded-lg py-2 px-2.5 inline-flex items-center justify-center bg-white border-gray-200 border"
+                            on:click=move |_ev| {
+                                (api_token_modal_copied_timer.start)(());
+                                if let Some(clipboard) = window().navigator().clipboard() {
+                                    let _ = clipboard.write_text(&api_token_modal_token.get());
+                                }
+                            }
+                        >
+
+                            <span
+                                class="inline-flex items-center"
+                                class=("hidden", api_token_modal_copied_timer.is_pending)
+                            >
+                                <Icon icon=icondata::RiFileCopy2DocumentFill class="w-3 h-3 me-1.5"/>
+                                <span class="text-xs font-semibold">Copy</span>
+                            </span>
+                            <span
+                                class="hidden items-center"
+                                class=("!inline-flex", api_token_modal_copied_timer.is_pending)
+                            >
+                                <Icon icon=icondata::BiCheckRegular class="w-3 h-3 me-1.5 text-blue-700"/>
+                                <span class="text-xs font-semibold text-blue-700">Copied</span>
+                            </span>
+                        </button>
+                    </div>
+                    <Show when=move || api_token_modal_server_error().is_some()>
+                        <div class="rounded-lg p-4 flex bg-red-100 mt-2">
+                            <div>
+                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
+                            </div>
+                            <div class="ml-3 text-red-700">
+                                {move || {
+                                    match api_token_modal_server_error() {
+                                        None => view! {}.into_view(),
+                                        Some(error) => view! { <p>{error}</p> }.into_view(),
+                                    }
+                                }}
+
+                            </div>
+                        </div>
+                    </Show>
+                </div>
+                <div class="flex flex-col gap-3 sm:flex-row-reverse">
+                    <button
+                        type="button"
+                        class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
+                        on:click=move |_ev| {
+                            api_token_modal_open.set(false);
+                        }
+                    >
+
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+        </Modal>
     }
 }

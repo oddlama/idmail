@@ -167,7 +167,7 @@ pub fn Tab(
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
                                     <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
                                         <A href="/aliases" class="flex flex-row items-center mb-4 sm:mb-0">
-                                            <img class="h-9" src="/logo-with-text.svg" />
+                                            <img class="h-9" src="/logo-with-text.svg"/>
                                         </A>
                                         <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
                                             <A href="/aliases" class=class_for(Tab::Aliases)>
@@ -327,7 +327,9 @@ pub fn Tab(
 
                                     {match tab {
                                         Tab::Aliases => view! { <Aliases user=user.clone() reload_stats/> }.into_view(),
-                                        Tab::Mailboxes => view! { <Mailboxes user=user.clone() reload_stats/> }.into_view(),
+                                        Tab::Mailboxes => {
+                                            view! { <Mailboxes user=user.clone() reload_stats/> }.into_view()
+                                        }
                                         Tab::Domains => view! { <Domains user=user.clone()/> }.into_view(),
                                         Tab::Users => view! { <Users/> }.into_view(),
                                         Tab::AccountSettings => {

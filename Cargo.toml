@@ -22,6 +22,8 @@ console_error_panic_hook = "0.1"
 console_log = "1.0"
 email_address = "0.2.4"
 futures = "0.3"
+getrandom = "0.2.14"
+hex = "0.4.3"
 http = "1.0"
 icondata = "0.3.0"
 leptos = { version = "0.6", features = ["nightly"] }
@@ -44,6 +46,10 @@ tower-http = { version = "0.5", features = ["fs"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = "0.3.18"
 wasm-bindgen = "0.2"
+
+[dependencies.web-sys]
+version = "0.3"
+features = ["Clipboard", "Navigator"]
 
 [features]
 default = ["ssr"]
