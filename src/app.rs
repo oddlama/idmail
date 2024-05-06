@@ -258,7 +258,7 @@ pub fn Tab(
                                         </div>
                                     </div>
                                 </div>
-                                <div class="overflow-hidden bg-background px-4 md:px-12">
+                                <div class="overflow-hidden px-4 md:px-12">
                                     <Show when=move || tab != Tab::AccountSettings>
                                         <div class="grid gap-4 lg:grid-cols-3">
                                             <div class="rounded-xl border-[1.5px]">

@@ -166,7 +166,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
     let action_value = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
 
     view! {
-        <div class="relative flex min-h-screen flex-col bg-background">
+        <div class="relative flex min-h-screen flex-col">
             <div class="w-full h-screen flex items-center justify-center px-4">
                 <div class="flex flex-col mx-auto">
                     <div class="mx-auto mb-4 flex flex-row">
