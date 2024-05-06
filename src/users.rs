@@ -353,13 +353,13 @@ pub fn Users() -> impl IntoView {
                 <td class="w-1 px-4 py-2 whitespace-nowrap text-ellipsis">
                     <div class="inline-flex items-center rounded-md">
                         <button
-                            class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
+                            class="text-gray-800 dark:text-zinc-100 hover:text-white dark:hover:text-black bg-white dark:bg-black hover:bg-blue-600 dark:hover:bg-blue-500 transition-all border-[1.5px] border-gray-200 dark:border-zinc-800 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| edit_modal_open_with(Some(edit_user.clone()))
                         >
                             <Icon icon=icondata::FiEdit class="w-5 h-5"/>
                         </button>
                         <button
-                            class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
+                            class="text-gray-800 dark:text-zinc-100 hover:text-white dark:hover:text-black bg-white dark:bg-black hover:bg-red-600 dark:hover:bg-red-500 transition-all border-l-0 border-[1.5px] border-gray-200 dark:border-zinc-800 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| {
                                 delete_modal_user.set(Some(delete_username.clone()));
                             }
@@ -401,7 +401,7 @@ pub fn Users() -> impl IntoView {
             <div class="space-y-4">
                 <div class="flex flex-wrap items-center justify-between">
                     <input
-                        class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex flex-none rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         type="search"
                         placeholder="Search"
                         value=rows.search
@@ -412,7 +412,7 @@ pub fn Users() -> impl IntoView {
 
                     <button
                         type="button"
-                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-700 hover:bg-blue-500 dark:hover:bg-blue-600 focus:ring-blue-300 dark:focus:ring-blue-900"
                         on:click=move |_| edit_modal_open_with(None)
                     >
                         <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
@@ -424,7 +424,7 @@ pub fn Users() -> impl IntoView {
                     </div>
                 </div>
 
-                <div class="rounded-lg border-[1.5px] text-base flex flex-col overflow-hidden">
+                <div class="rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 text-base flex flex-col overflow-hidden">
                     <div class="overflow-auto grow min-h-0">
                         <table class="table-auto text-left w-full">
                             <TableContent
@@ -472,7 +472,7 @@ pub fn Users() -> impl IntoView {
                     Username
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
                     placeholder="username"
                     required="required"
@@ -496,7 +496,7 @@ pub fn Users() -> impl IntoView {
 
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     class=("!ring-4", has_invalid_password)
                     class=("!ring-red-500", has_invalid_password)
                     type="password"
@@ -514,7 +514,7 @@ pub fn Users() -> impl IntoView {
                     Repeat Password
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     class=("!ring-4", has_password_mismatch)
                     class=("!ring-red-500", has_password_mismatch)
                     type="password"
@@ -527,7 +527,7 @@ pub fn Users() -> impl IntoView {
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
                     id="users_admin"
-                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    class="w-4 h-4 bg-transparent dark:bg-transparent text-blue-600 border-[1.5px] border-gray-200 dark:border-zinc-800 rounded checked:bg-blue-600 dark:checked:bg-blue-600 dark:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
                     type="checkbox"
                     on:change=move |ev| set_edit_modal_input_admin(event_target_checked(&ev))
                     prop:checked=edit_modal_input_admin
@@ -542,7 +542,7 @@ pub fn Users() -> impl IntoView {
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
                     id="users_active"
-                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    class="w-4 h-4 bg-transparent dark:bg-transparent text-blue-600 border-[1.5px] border-gray-200 dark:border-zinc-800 rounded checked:bg-blue-600 dark:checked:bg-blue-600 dark:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
                     type="checkbox"
                     on:change=move |ev| set_edit_modal_input_active(event_target_checked(&ev))
                     prop:checked=edit_modal_input_active
@@ -619,19 +619,17 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
             <div class="flex items-center justify-between space-y-2 mb-4">
                 <h2 class="text-4xl font-bold">Account Settings</h2>
             </div>
-            <div class="space-y-4">
+            <div class="grid gap-4 grid-cols-1 sm:max-w-sm">
                 <button
                     type="button"
-                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-300"
                     on:click=move |_| edit_modal_open()
                 >
                     "Change password"
                 </button>
-            </div>
-            <div class="space-y-4">
                 <button
                     type="button"
-                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                     on:click=move |_| {
                         spawn_local(async move {
                             match regenerate_api_key().await {
@@ -664,7 +662,7 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                     "Current Password"
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="password"
                     required="required"
                     maxlength="1024"
@@ -680,7 +678,7 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                     "Password"
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     class=("!ring-4", has_invalid_password)
                     class=("!ring-red-500", has_invalid_password)
                     type="password"
@@ -698,7 +696,7 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                     Repeat Password
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     class=("!ring-4", has_password_mismatch)
                     class=("!ring-red-500", has_password_mismatch)
                     type="password"
@@ -711,22 +709,22 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
         </EditModal>
 
         <Modal open=api_token_modal_open dialog_el=api_token_modal>
-            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white text-left transition-all sm:w-full sm:max-w-xl">
-                <h3 class="text-2xl tracking-tight mt-2 mb-2 font-semibold text-gray-900">"API Token"</h3>
+            <div class="relative p-4 transform overflow-hidden rounded-lg bg-white dark:bg-black text-left transition-all sm:w-full sm:max-w-xl">
+                <h3 class="text-2xl tracking-tight mt-2 mb-2 font-semibold text-gray-900 dark:text-gray-200">"API Token"</h3>
                 <div class="pb-3 space-y-3">
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
                         "Your new API Token is displayed below. Make sure to save it now, as it will not be displayed again."
                     </p>
                     <div class="w-full relative">
                         <input
                             type="text"
-                            class="col-span-6 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full px-2.5 py-4"
+                            class="col-span-6 bg-gray-50 dark:bg-gray-900 dark:bg-black border border-gray-300 text-gray-500 dark:text-gray-400 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full px-2.5 py-4"
                             value=move || api_token_modal_token
                             disabled
                             readonly
                         />
                         <button
-                            class="absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-900 hover:bg-gray-100 rounded-lg py-2 px-2.5 inline-flex items-center justify-center bg-white border-gray-200 border"
+                            class="absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-900 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg py-2 px-2.5 inline-flex items-center justify-center bg-white dark:bg-black border-gray-200 border"
                             on:click=move |_ev| {
                                 (api_token_modal_copied_timer.start)(());
                                 if let Some(clipboard) = window().navigator().clipboard() {
@@ -746,17 +744,17 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                                 class="hidden items-center"
                                 class=("!inline-flex", api_token_modal_copied_timer.is_pending)
                             >
-                                <Icon icon=icondata::BiCheckRegular class="w-3 h-3 me-1.5 text-blue-700"/>
-                                <span class="text-xs font-semibold text-blue-700">Copied</span>
+                                <Icon icon=icondata::BiCheckRegular class="w-3 h-3 me-1.5 text-blue-700 dark:text-blue-300"/>
+                                <span class="text-xs font-semibold text-blue-700 dark:text-blue-300">Copied</span>
                             </span>
                         </button>
                     </div>
                     <Show when=move || api_token_modal_server_error().is_some()>
-                        <div class="rounded-lg p-4 flex bg-red-100 mt-2">
+                        <div class="rounded-lg p-4 flex bg-red-100 dark:bg-red-900 mt-2">
                             <div>
-                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
+                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400 dark:text-red-200"/>
                             </div>
-                            <div class="ml-3 text-red-700">
+                            <div class="ml-3 text-red-700 dark:text-red-200">
                                 {move || {
                                     match api_token_modal_server_error() {
                                         None => view! {}.into_view(),
@@ -771,7 +769,7 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                 <div class="flex flex-col gap-3 sm:flex-row-reverse">
                     <button
                         type="button"
-                        class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white px-3 py-2 font-semibold text-gray-900 focus:ring-4 focus:ring-gray-300 border-[1.5px] border-gray-300 hover:bg-gray-100 sm:w-auto"
+                        class="inline-flex w-full min-w-20 justify-center rounded-lg transition-all bg-white dark:bg-black px-3 py-2 font-semibold text-gray-900 dark:text-gray-200 focus:ring-4 dark:focus:ring-zinc-800 border-[1.5px] border-gray-300 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-900 sm:w-auto"
                         on:click=move |_ev| {
                             api_token_modal_open.set(false);
                         }

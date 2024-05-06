@@ -8,7 +8,7 @@ use crate::{
 use chrono::{Months, Utc};
 use leptos::{html::Div, *};
 use leptos_icons::Icon;
-use leptos_meta::{provide_meta_context, Link, Stylesheet, Title};
+use leptos_meta::{provide_meta_context, Body, Link, Stylesheet, Title};
 use leptos_router::{ActionForm, Redirect, Route, Router, Routes, A};
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
@@ -32,6 +32,7 @@ pub fn App() -> impl IntoView {
         <Link rel="shortcut icon" type_="image/ico" href="/favicon.ico"/>
         <Stylesheet id="leptos" href="/pkg/idmail.css"/>
         <Title formatter=|text| format!("{text} · idmail")/>
+        <Body class="bg-white text-black dark:bg-black dark:text-zinc-100"/>
         <Router>
             <main>
                 <Routes>
@@ -123,8 +124,8 @@ pub fn Tab(
     );
 
     let class_for = move |t| {
-        let a_class_inactive = "inline-flex flex-1 sm:flex-none items-center justify-center whitespace-nowrap font-medium text-base hover:text-indigo-700 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 focus-visible:ring-blue-300".to_string();
-        let a_class_active = format!("{a_class_inactive} bg-indigo-100 text-indigo-700");
+        let a_class_inactive = "inline-flex flex-1 sm:flex-none items-center justify-ceter whitespace-nowrap font-medium text-base hover:text-indigo-700 dark:hover:text-indigo-300 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 dark:hover:bg-indigo-900 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-900".to_string();
+        let a_class_active = format!("{a_class_inactive} bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-100");
         if t == tab {
             a_class_active
         } else {
@@ -156,7 +157,7 @@ pub fn Tab(
 
     view! {
         <Transition fallback=move || {
-            view! { <span class="text-gray-300">"Loading..."</span> }
+            view! { <span class="text-gray-300 dark:text-gray-600">"Loading..."</span> }
         }>
             {move || {
                 user.get()
@@ -194,7 +195,7 @@ pub fn Tab(
                                         <button
                                             id="account-button"
                                             type="button"
-                                            class="flex items-center text-sm pe-1 font-medium text-gray-900 rounded-lg hover:text-indigo-600 md:me-0"
+                                            class="flex items-center text-sm pe-1 font-medium text-gray-900 dark:text-gray-200 rounded-lg hover:text-indigo-600 md:me-0"
                                             on:click=move |_ev| {
                                                 toggle_show_account_dropdown();
                                             }
@@ -219,10 +220,10 @@ pub fn Tab(
 
                                         <div
                                             node_ref=account_dropdown
-                                            class="z-10 bg-white divide-y-[1.5px] rounded-lg border-[1.5px] min-w-44 max-w-80 hidden absolute top-6 right-0"
+                                            class="z-10 bg-white dark:bg-black divide-y-[1.5px] divide-gray-200 dark:divide-zinc-800 rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 min-w-44 max-w-80 hidden absolute top-6 right-0"
                                             class=("!block", show_account_dropdown)
                                         >
-                                            <div class="px-4 py-3 text-sm text-gray-900">
+                                            <div class="px-4 py-3 text-sm text-gray-900 dark:text-gray-200">
                                                 <div class="font-medium">
                                                     {if user.admin {
                                                         "Admin"
@@ -239,7 +240,7 @@ pub fn Tab(
                                                 <li>
                                                     <A
                                                         href="/account"
-                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100"
+                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     >
                                                         "Settings"
                                                     </A>
@@ -249,7 +250,7 @@ pub fn Tab(
                                                 <ActionForm action=logout>
                                                     <button
                                                         type="submit"
-                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100"
+                                                        class="block px-4 py-2 w-full text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     >
                                                         "Sign Out"
                                                     </button>
@@ -261,7 +262,7 @@ pub fn Tab(
                                 <div class="overflow-hidden px-4 md:px-12">
                                     <Show when=move || tab != Tab::AccountSettings>
                                         <div class="grid gap-4 lg:grid-cols-3">
-                                            <div class="rounded-xl border-[1.5px]">
+                                            <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Aliases</h3>
                                                     <Icon icon=icondata::TbMailForward class="w-5 h-5"/>
@@ -279,7 +280,7 @@ pub fn Tab(
 
                                                         </Transition>
                                                     </div>
-                                                    <p class="text-xs text-muted-foreground">
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
                                                         <Transition fallback=move || {
                                                             view! { <span class="animate-pulse">"..."</span> }
                                                         }>
@@ -302,24 +303,24 @@ pub fn Tab(
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div class="rounded-xl border-[1.5px]">
+                                            <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
                                                     <Icon icon=icondata::BsArrowDown class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+12,234</div>
-                                                    <p class="text-xs text-muted-foreground">+19% from last month</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">+19% from last month</p>
                                                 </div>
                                             </div>
-                                            <div class="rounded-xl border-[1.5px]">
+                                            <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
                                                     <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
                                                     <Icon icon=icondata::BsArrowUp class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+573</div>
-                                                    <p class="text-xs text-muted-foreground">+201 since last hour</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">+201 since last hour</p>
                                                 </div>
                                             </div>
                                         </div>

@@ -423,13 +423,13 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                 <td class="w-1 px-4 py-2 whitespace-nowrap text-ellipsis">
                     <div class="inline-flex items-center rounded-md">
                         <button
-                            class="text-gray-800 hover:text-white bg-white hover:bg-blue-600 transition-all border-[1.5px] border-gray-200 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
+                            class="text-gray-800 dark:text-zinc-100 hover:text-white dark:hover:text-black bg-white dark:bg-black hover:bg-blue-600 dark:hover:bg-blue-500 transition-all border-[1.5px] border-gray-200 dark:border-zinc-800 rounded-l-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| edit_modal_open_with(Some(edit_alias.clone()))
                         >
                             <Icon icon=icondata::FiEdit class="w-5 h-5"/>
                         </button>
                         <button
-                            class="text-gray-800 hover:text-white bg-white hover:bg-red-600 transition-all border-l-0 border-[1.5px] border-gray-200 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
+                            class="text-gray-800 dark:text-zinc-100 hover:text-white dark:hover:text-black bg-white dark:bg-black hover:bg-red-600 dark:hover:bg-red-500 transition-all border-l-0 border-[1.5px] border-gray-200 dark:border-zinc-800 rounded-r-lg font-medium px-4 py-2 inline-flex space-x-1 items-center"
                             on:click=move |_| {
                                 delete_modal_alias.set(Some(delete_address.clone()));
                             }
@@ -469,7 +469,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
             <div class="space-y-4">
                 <div class="flex flex-wrap items-center justify-between">
                     <input
-                        class="flex flex-none rounded-lg border-[1.5px] border-input bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex flex-none rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-base p-2.5 me-2 mb-2 w-full md:w-[360px] lg:w-[520px] transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         type="search"
                         placeholder="Search"
                         value=rows.search
@@ -480,7 +480,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
 
                     <button
                         type="button"
-                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-500 focus:ring-blue-300"
+                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-700 hover:bg-blue-500 dark:hover:bg-blue-600 focus:ring-blue-300 dark:focus:ring-blue-900"
                         on:click=move |_| edit_modal_open_with(None)
                     >
                         <Icon icon=icondata::FiPlus class="w-6 h-6 me-2"/>
@@ -488,7 +488,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     </button>
                     <button
                         type="button"
-                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 hover:bg-green-500 focus:ring-green-300"
+                        class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 dark:bg-green-700 hover:bg-green-500 dark:hover:bg-green-600 focus:ring-green-300 dark:focus:ring-green-900"
                     >
                         <Icon icon=icondata::FaDiceSolid class="w-6 h-6 me-2"/>
                         "New Random"
@@ -499,7 +499,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     </div>
                 </div>
 
-                <div class="rounded-lg border-[1.5px] text-base flex flex-col overflow-hidden">
+                <div class="rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 text-base flex flex-col overflow-hidden">
                     <div class="overflow-auto grow min-h-0">
                         <table class="table-auto text-left w-full">
                             <TableContent
@@ -549,7 +549,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     </label>
                     <div class="flex flex-row">
                         <input
-                            class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex sm:min-w-32 flex-1 rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             class=("!ring-4", has_invalid_email)
                             class=("!ring-red-500", has_invalid_email)
                             type="email"
@@ -568,7 +568,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                         Domain
                     </label>
                     <Select
-                        class="w-full h-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                        class="w-full h-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300"
                         choices=allowed_domains
                         value=edit_modal_input_domain
                         set_value=set_edit_modal_input_domain
@@ -586,7 +586,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                 {if user.admin || user.mailbox_owner.is_some() {
                     view! {
                         <input
-                            class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             class=("!ring-4", has_invalid_target)
                             class=("!ring-red-500", has_invalid_target)
                             type="email"
@@ -605,7 +605,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                 } else {
                     view! {
                         <Select
-                            class="w-full h-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300"
+                            class="w-full h-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300"
                             choices=allowed_targets
                             value=edit_modal_input_target
                             set_value=set_edit_modal_input_target
@@ -623,7 +623,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     Comment
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
                     placeholder="Comment"
                     on:input=move |ev| set_edit_modal_input_comment(event_target_value(&ev))
@@ -638,7 +638,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     Owner
                 </label>
                 <input
-                    class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all placeholder:text-gray-500 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     type="text"
                     placeholder=edit_modal_input_owner
                     on:input=move |ev| set_edit_modal_input_owner(event_target_value(&ev))
@@ -649,7 +649,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
             <div class="flex flex-row gap-2 mt-2 items-center">
                 <input
                     id="alias_active"
-                    class="w-4 h-4 bg-transparent text-blue-600 border-[1.5px] border-input rounded checked:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
+                    class="w-4 h-4 bg-transparent dark:bg-transparent text-blue-600 border-[1.5px] border-gray-200 dark:border-zinc-800 rounded checked:bg-blue-600 dark:checked:bg-blue-600 dark:bg-blue-600 focus:ring-ring focus:ring-4 transition-all"
                     type="checkbox"
                     on:change=move |ev| set_edit_modal_input_active(event_target_checked(&ev))
                     prop:checked=edit_modal_input_active

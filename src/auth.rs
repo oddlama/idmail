@@ -172,10 +172,10 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                     <div class="mx-auto mb-4 flex flex-row">
                         <img class="h-9" src="/logo-with-text.svg"/>
                     </div>
-                    <ActionForm action class="rounded-lg border border-[1.5px] text-card-foreground max-w-sm">
+                    <ActionForm action class="rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 text-card-foreground max-w-sm">
                         <div class="flex flex-col space-y-1.5 p-6">
                             <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
-                            <p class="text-sm text-gray-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
                                 "Enter your mailbox address and password below to login"
                             </p>
                         </div>
@@ -189,7 +189,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                         Email
                                     </label>
                                     <input
-                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         type="text"
                                         name="username"
                                         placeholder="username@example.com"
@@ -206,7 +206,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                         </label>
                                     </div>
                                     <input
-                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-input bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="flex flex-none w-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         type="password"
                                         name="password"
                                         required="required"
@@ -214,11 +214,11 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                 </div>
                                 <ErrorBoundary fallback=|errors| {
                                     view! {
-                                        <div class="rounded-lg p-4 flex bg-red-100">
+                                        <div class="rounded-lg p-4 flex bg-red-100 dark:bg-red-800">
                                             <div>
-                                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400"/>
+                                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400 dark:text-red-300"/>
                                             </div>
-                                            <div class="ml-3 text-red-700">
+                                            <div class="ml-3 text-red-700 dark:text-red-300">
                                                 <p>
                                                     {move || {
                                                         errors
@@ -239,7 +239,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                 <button
                                     type="submit"
                                     tabindex="0"
-                                    class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 sm:w-auto"
+                                    class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300 sm:w-auto"
                                 >
                                     Login
                                 </button>
@@ -264,7 +264,7 @@ pub fn LoginView(
 
     view! {
         <Transition fallback=move || {
-            view! { <span class="text-gray-300">"Loading..."</span> }
+            view! { <span class="text-gray-300 dark:text-gray-600">"Loading..."</span> }
         }>
             {move || {
                 user.get()
