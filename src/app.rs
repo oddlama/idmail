@@ -167,8 +167,9 @@ pub fn Tab(
                             view! {
                                 <div class="flex flex-col sm:flex-row items-center py-6 px-4 md:px-12">
                                     <div class="flex-1 flex flex-col sm:flex-row items-center w-full sm:w-auto">
-                                        <A href="/aliases" class="flex flex-row items-center mb-4 sm:mb-0">
-                                            <img class="h-9" src="/logo-with-text.svg"/>
+                                        <A href="/aliases" class="flex flex-row items-center mb-4 sm:mb-0 items-center">
+                                            <img class="w-16 h-16 me-2" src="/logo.svg"/>
+                                            <h2 class="text-4xl leading-none font-bold inline-block">idmail</h2>
                                         </A>
                                         <div class="flex flex-row w-full sm:w-auto items-center gap-4 sm:ml-12 mb-4 sm:mb-0">
                                             <A href="/aliases" class=class_for(Tab::Aliases)>
@@ -310,7 +311,9 @@ pub fn Tab(
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+12,234</div>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">+19% from last month</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        +19% from last month
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
@@ -320,7 +323,9 @@ pub fn Tab(
                                                 </div>
                                                 <div class="p-4 pt-0">
                                                     <div class="text-2xl font-bold">+573</div>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">+201 since last hour</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        +201 since last hour
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

@@ -622,14 +622,14 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
             <div class="grid gap-4 grid-cols-1 sm:max-w-sm">
                 <button
                     type="button"
-                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-300"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-900"
                     on:click=move |_| edit_modal_open()
                 >
                     "Change password"
                 </button>
                 <button
                     type="button"
-                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                    class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 transition-all rounded-lg focus:ring-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 focus:ring-blue-300 dark:focus:ring-blue-900 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                     on:click=move |_| {
                         spawn_local(async move {
                             match regenerate_api_key().await {
@@ -710,7 +710,9 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
 
         <Modal open=api_token_modal_open dialog_el=api_token_modal>
             <div class="relative p-4 transform overflow-hidden rounded-lg bg-white dark:bg-black text-left transition-all sm:w-full sm:max-w-xl">
-                <h3 class="text-2xl tracking-tight mt-2 mb-2 font-semibold text-gray-900 dark:text-gray-200">"API Token"</h3>
+                <h3 class="text-2xl tracking-tight mt-2 mb-2 font-semibold text-gray-900 dark:text-gray-200">
+                    "API Token"
+                </h3>
                 <div class="pb-3 space-y-3">
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         "Your new API Token is displayed below. Make sure to save it now, as it will not be displayed again."
@@ -744,7 +746,10 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                                 class="hidden items-center"
                                 class=("!inline-flex", api_token_modal_copied_timer.is_pending)
                             >
-                                <Icon icon=icondata::BiCheckRegular class="w-3 h-3 me-1.5 text-blue-700 dark:text-blue-300"/>
+                                <Icon
+                                    icon=icondata::BiCheckRegular
+                                    class="w-3 h-3 me-1.5 text-blue-700 dark:text-blue-300"
+                                />
                                 <span class="text-xs font-semibold text-blue-700 dark:text-blue-300">Copied</span>
                             </span>
                         </button>

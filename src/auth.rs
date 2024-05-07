@@ -169,10 +169,14 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
         <div class="relative flex min-h-screen flex-col">
             <div class="w-full h-screen flex items-center justify-center px-4">
                 <div class="flex flex-col mx-auto">
-                    <div class="mx-auto mb-4 flex flex-row">
-                        <img class="h-9" src="/logo-with-text.svg"/>
+                    <div class="mx-auto mb-4 flex flex-row items-center">
+                        <img class="w-16 h-16 me-2" src="/logo.svg"/>
+                        <h2 class="text-4xl leading-none font-bold inline-block">idmail</h2>
                     </div>
-                    <ActionForm action class="rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 text-card-foreground max-w-sm">
+                    <ActionForm
+                        action
+                        class="rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 text-card-foreground max-w-sm"
+                    >
                         <div class="flex flex-col space-y-1.5 p-6">
                             <h2 class="font-semibold tracking-tight text-2xl mb-2">Login</h2>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -216,7 +220,10 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                     view! {
                                         <div class="rounded-lg p-4 flex bg-red-100 dark:bg-red-800">
                                             <div>
-                                                <Icon icon=icondata::BiXCircleSolid class="w-5 h-5 text-red-400 dark:text-red-300"/>
+                                                <Icon
+                                                    icon=icondata::BiXCircleSolid
+                                                    class="w-5 h-5 text-red-400 dark:text-red-300"
+                                                />
                                             </div>
                                             <div class="ml-3 text-red-700 dark:text-red-300">
                                                 <p>
@@ -239,7 +246,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                                 <button
                                     type="submit"
                                     tabindex="0"
-                                    class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300 sm:w-auto"
+                                    class="inline-flex w-full justify-center mt-3 items-center rounded-lg transition-all p-2.5 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 font-semibold text-white focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900 sm:w-auto"
                                 >
                                     Login
                                 </button>

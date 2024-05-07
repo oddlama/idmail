@@ -499,7 +499,7 @@ pub fn Mailboxes(user: User, reload_stats: Callback<()>) -> impl IntoView {
                         Domain
                     </label>
                     <Select
-                        class="w-full h-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300"
+                        class="w-full h-full rounded-lg border-[1.5px] border-gray-200 dark:border-zinc-800 bg-transparent dark:bg-transparent text-sm p-2.5 transition-all focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
                         choices=allowed_domains
                         value=edit_modal_input_domain
                         set_value=set_edit_modal_input_domain

@@ -62,7 +62,7 @@ where
                     }
                 />
 
-                <div class="relative w-[3.25rem] h-6 bg-gray-300 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-7 rtl:peer-checked:after:-translate-x-7 after:content-[''] after:absolute after:top-[3px] after:start-[3px] after:bg-white dark:bg-black after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 dark:checked:bg-blue-600 dark:bg-blue-600"></div>
+                <div class="relative w-[3.25rem] h-6 bg-gray-300 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:focus:ring-blue-900 rounded-full peer peer-checked:after:translate-x-7 rtl:peer-checked:after:-translate-x-7 after:content-[''] after:absolute after:top-[3px] after:start-[3px] after:bg-white dark:bg-black after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 dark:checked:bg-blue-600 dark:bg-blue-600"></div>
             </label>
         </td>
     }
@@ -184,7 +184,11 @@ pub fn Modal(#[prop(into)] open: Signal<bool>, children: Children, dialog_el: No
     });
 
     view! {
-        <dialog ref=dialog_el open=open.get_untracked() class="rounded-lg backdrop:bg-gray-50 dark:bg-gray-900 dark:bg-black0 dark:backdrop:bg-black backdrop:bg-opacity-75 dark:backdrop:bg-opacity-75 dark:border-[1.5px] dark:border-zinc-800">
+        <dialog
+            ref=dialog_el
+            open=open.get_untracked()
+            class="rounded-lg backdrop:bg-gray-50 dark:bg-gray-900 dark:bg-black0 dark:backdrop:bg-black backdrop:bg-opacity-75 dark:backdrop:bg-opacity-75 dark:border-[1.5px] dark:border-zinc-800"
+        >
             <main>{children()}</main>
         </dialog>
     }
@@ -309,7 +313,7 @@ pub fn EditModal<T: Clone + 'static, F: Fn(&T) -> &str + 'static>(
                         <button
                             type="button"
                             disabled=move || (modal_waiting() || !errors.get().is_empty())
-                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 font-semibold text-white dark:text-zinc-100 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-300 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                            class="inline-flex w-full min-w-20 justify-center items-center rounded-lg transition-all px-3 py-2 bg-blue-600 dark:bg-blue-600 hover:bg-blue-500 dark:hover:bg-blue-500 font-semibold text-white dark:text-zinc-100 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
                             class=("!bg-blue-500", move || (modal_waiting() || !errors.get().is_empty()))
                             on:click=move |_ev| {
                                 if let Some(data) = data.get() {
@@ -358,7 +362,9 @@ pub fn DeleteModal(
                             <Icon icon=icondata::AiWarningFilled class="w-6 h-6 text-red-600 dark:text-red-400"/>
                         </div>
                         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 class="text-2xl tracking-tight font-semibold text-gray-900 dark:text-gray-200">"Delete " {data}</h3>
+                            <h3 class="text-2xl tracking-tight font-semibold text-gray-900 dark:text-gray-200">
+                                "Delete " {data}
+                            </h3>
                             <div class="mt-2">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{text}</p>
                             </div>
