@@ -5,6 +5,7 @@ use leptos::{
 };
 use leptos_icons::Icon;
 use leptos_struct_table::*;
+use leptos_use::ColorMode;
 
 #[component]
 #[allow(unused_variables, non_snake_case)]
@@ -150,7 +151,10 @@ impl TableClassesProvider for TailwindClassesPreset {
             "bg-gray-50 dark:bg-zinc-950 dark:bg-black hover:bg-gray-100 dark:hover:bg-zinc-900"
         };
 
-        format!("border-t-[1.5px] border-gray-200 dark:border-zinc-800 last:border-0 {} {}", bg_color, template_classes)
+        format!(
+            "border-t-[1.5px] border-gray-200 dark:border-zinc-800 last:border-0 {} {}",
+            bg_color, template_classes
+        )
     }
 
     fn loading_cell(&self, _row_index: usize, _col_index: usize, prop_class: &str) -> String {
@@ -187,7 +191,7 @@ pub fn Modal(#[prop(into)] open: Signal<bool>, children: Children, dialog_el: No
         <dialog
             ref=dialog_el
             open=open.get_untracked()
-            class="rounded-lg backdrop:bg-gray-50 dark:bg-gray-900 dark:bg-black0 dark:backdrop:bg-black backdrop:bg-opacity-75 dark:backdrop:bg-opacity-75 dark:border-[1.5px] dark:border-zinc-800"
+            class="rounded-lg backdrop:bg-gray-50 dark:bg-gray-900 dark:bg-black0 dark:backdrop:bg-black backdrop:bg-opacity-75 dark:backdrop:bg-opacity-75 border-[1.5px] border-gray-200 dark:border-zinc-800"
         >
             <main>{children()}</main>
         </dialog>
@@ -405,5 +409,34 @@ pub fn DeleteModal(
                 </div>
             </div>
         </Modal>
+    }
+}
+
+#[component]
+pub fn ColorModeToggle(color_mode: Signal<ColorMode>, set_color_mode: WriteSignal<ColorMode>) -> impl IntoView {
+    view! {
+        <button
+            type="button"
+            class="me-2 rounded-lg transition-all bg-transparent p-2.5 text-gray-900 dark:text-gray-200 focus:ring-4 dark:focus:ring-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-900"
+            on:click=move |_ev| {
+                let new_mode = match color_mode() {
+                    ColorMode::Dark => ColorMode::Light,
+                    ColorMode::Light => ColorMode::Auto,
+                    _ => ColorMode::Dark,
+                };
+                set_color_mode(new_mode);
+            }
+        >
+
+            {move || {
+                let icon = match color_mode() {
+                    ColorMode::Dark => icondata::BsShadows,
+                    ColorMode::Light => icondata::BsSunFill,
+                    _ => icondata::BsCircleHalf,
+                };
+                view! { <Icon icon class="w-5 h-5"/> }
+            }}
+
+        </button>
     }
 }

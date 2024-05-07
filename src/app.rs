@@ -3,14 +3,17 @@ use crate::{
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
-    users::{AccountSettings, Users},
+    users::{AccountSettings, Users}, utils::ColorModeToggle,
 };
 use chrono::{Months, Utc};
 use leptos::{html::Div, *};
 use leptos_icons::Icon;
 use leptos_meta::{provide_meta_context, Body, Link, Stylesheet, Title};
 use leptos_router::{ActionForm, Redirect, Route, Router, Routes, A};
-use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
+use leptos_use::{
+    on_click_outside_with_options, use_color_mode_with_options, use_preferred_dark, ColorMode, OnClickOutsideOptions,
+    UseColorModeOptions,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Tab {
@@ -27,12 +30,28 @@ pub fn App() -> impl IntoView {
 
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
+    let color_mode = use_color_mode_with_options(UseColorModeOptions::default().emit_auto(true));
+    let prefers_dark = use_preferred_dark();
+    let body_class = Signal::derive(move || {
+        let dark = match (color_mode.mode)() {
+            ColorMode::Light => "",
+            ColorMode::Dark => "dark",
+            ColorMode::Auto | _ => {
+                if prefers_dark() {
+                    "dark"
+                } else {
+                    ""
+                }
+            }
+        };
+        format!("bg-white text-black dark:bg-black dark:text-zinc-100 {}", dark)
+    });
 
     view! {
         <Link rel="shortcut icon" type_="image/ico" href="/favicon.ico"/>
         <Stylesheet id="leptos" href="/pkg/idmail.css"/>
         <Title formatter=|text| format!("{text} · idmail")/>
-        <Body class="bg-white text-black dark:bg-black dark:text-zinc-100"/>
+        <Body class=body_class/>
         <Router>
             <main>
                 <Routes>
@@ -51,7 +70,7 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Login"/>
-                                <LoginView login logout/>
+                                <LoginView login logout color_mode=color_mode.mode set_color_mode=color_mode.set_mode/>
                             }
                         }
                     />
@@ -61,7 +80,13 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Aliases"/>
-                                <Tab login logout tab=Tab::Aliases/>
+                                <Tab
+                                    login
+                                    logout
+                                    color_mode=color_mode.mode
+                                    set_color_mode=color_mode.set_mode
+                                    tab=Tab::Aliases
+                                />
                             }
                         }
                     />
@@ -71,7 +96,13 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Mailboxes"/>
-                                <Tab login logout tab=Tab::Mailboxes/>
+                                <Tab
+                                    login
+                                    logout
+                                    color_mode=color_mode.mode
+                                    set_color_mode=color_mode.set_mode
+                                    tab=Tab::Mailboxes
+                                />
                             }
                         }
                     />
@@ -81,7 +112,13 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Domains"/>
-                                <Tab login logout tab=Tab::Domains/>
+                                <Tab
+                                    login
+                                    logout
+                                    color_mode=color_mode.mode
+                                    set_color_mode=color_mode.set_mode
+                                    tab=Tab::Domains
+                                />
                             }
                         }
                     />
@@ -91,7 +128,13 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Users"/>
-                                <Tab login logout tab=Tab::Users/>
+                                <Tab
+                                    login
+                                    logout
+                                    color_mode=color_mode.mode
+                                    set_color_mode=color_mode.set_mode
+                                    tab=Tab::Users
+                                />
                             }
                         }
                     />
@@ -101,7 +144,13 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! {
                                 <Title text="Account Settings"/>
-                                <Tab login logout tab=Tab::AccountSettings/>
+                                <Tab
+                                    login
+                                    logout
+                                    color_mode=color_mode.mode
+                                    set_color_mode=color_mode.set_mode
+                                    tab=Tab::AccountSettings
+                                />
                             }
                         }
                     />
@@ -116,6 +165,8 @@ pub fn App() -> impl IntoView {
 pub fn Tab(
     login: Action<Login, Result<(), ServerFnError>>,
     logout: Action<Logout, Result<(), ServerFnError>>,
+    color_mode: Signal<ColorMode>,
+    set_color_mode: WriteSignal<ColorMode>,
     tab: Tab,
 ) -> impl IntoView {
     let user = create_resource(
@@ -125,7 +176,8 @@ pub fn Tab(
 
     let class_for = move |t| {
         let a_class_inactive = "inline-flex flex-1 sm:flex-none items-center justify-ceter whitespace-nowrap font-medium text-base hover:text-indigo-700 dark:hover:text-indigo-300 py-2.5 px-4 transition-all rounded-lg focus-visible:ring-4 hover:bg-indigo-200 dark:hover:bg-indigo-900 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-900".to_string();
-        let a_class_active = format!("{a_class_inactive} bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-100");
+        let a_class_active =
+            format!("{a_class_inactive} bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-100");
         if t == tab {
             a_class_active
         } else {
@@ -193,10 +245,11 @@ pub fn Tab(
                                     <div class="flex flex-row items-center w-full sm:w-auto relative">
                                         <div class="flex-1 sm:flex-none"></div>
 
+                                        <ColorModeToggle color_mode set_color_mode/>
                                         <button
                                             id="account-button"
                                             type="button"
-                                            class="flex items-center text-sm pe-1 font-medium text-gray-900 dark:text-gray-200 rounded-lg hover:text-indigo-600 md:me-0"
+                                            class="flex items-center text-sm pe-1 font-medium text-gray-900 dark:text-gray-200 rounded-lg hover:text-indigo-600 dark:hover:text-indigo-400 md:me-0"
                                             on:click=move |_ev| {
                                                 toggle_show_account_dropdown();
                                             }

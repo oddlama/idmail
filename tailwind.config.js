@@ -6,6 +6,7 @@ module.exports = {
     relative: true,
     files: ["*.html", "./src/**/*.rs"],
   },
+  darkMode: 'selector',
   theme: {
     extend: {
       fontFamily: {

@@ -1,7 +1,10 @@
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::{ActionForm, Redirect};
+use leptos_use::ColorMode;
 use serde::{Deserialize, Serialize};
+
+use crate::utils::ColorModeToggle;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
@@ -162,12 +165,20 @@ pub async fn logout() -> Result<(), ServerFnError> {
 }
 
 #[component]
-pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
+pub fn Login(
+    action: Action<Login, Result<(), ServerFnError>>,
+    color_mode: Signal<ColorMode>,
+    set_color_mode: WriteSignal<ColorMode>,
+) -> impl IntoView {
     let action_value = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
 
     view! {
         <div class="relative flex min-h-screen flex-col">
+            <div class="absolute top-4 right-4">
+                <ColorModeToggle color_mode set_color_mode/>
+            </div>
             <div class="w-full h-screen flex items-center justify-center px-4">
+
                 <div class="flex flex-col mx-auto">
                     <div class="mx-auto mb-4 flex flex-row items-center">
                         <img class="w-16 h-16 me-2" src="/logo.svg"/>
@@ -263,6 +274,8 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
 pub fn LoginView(
     login: Action<Login, Result<(), ServerFnError>>,
     logout: Action<Logout, Result<(), ServerFnError>>,
+    color_mode: Signal<ColorMode>,
+    set_color_mode: WriteSignal<ColorMode>,
 ) -> impl IntoView {
     let user = create_resource(
         move || (login.version().get(), logout.version().get()),
@@ -281,11 +294,11 @@ pub fn LoginView(
                                 <div class="absolute">
                                     <span>{format!("Login error: {}", e)}</span>
                                 </div>
-                                <Login action=login/>
+                                <Login action=login color_mode set_color_mode/>
                             }
                                 .into_view()
                         }
-                        Ok(None) => view! { <Login action=login/> }.into_view(),
+                        Ok(None) => view! { <Login action=login color_mode set_color_mode/> }.into_view(),
                         Ok(Some(_)) => view! { <Redirect path="/aliases"/> }.into_view(),
                     })
             }}
