@@ -274,7 +274,7 @@ pub fn Domains(user: User) -> impl IntoView {
         }
     });
 
-    let errors = move || Vec::new();
+    let errors = Vec::new;
 
     let on_edit = move |(data, on_error): (Option<Domain>, Callback<String>)| {
         spawn_local(async move {
@@ -386,6 +386,7 @@ pub fn Domains(user: User) -> impl IntoView {
                             <TableContent
                                 rows
                                 sorting=sorting
+                                sorting_mode=SortingMode::SingleColumn
                                 row_renderer=domain_row_renderer
                                 reload_controller=reload_controller
                                 loading_row_display_limit=0

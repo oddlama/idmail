@@ -149,6 +149,8 @@ pub async fn create_or_update_mailbox(
     if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE mailboxes SET address = ");
         query.push_bind(address);
+        query.push(", domain = ");
+        query.push_bind(domain);
         if !password.is_empty() {
             let password_hash = mk_password_hash(&password)?;
             query.push(", password_hash = ");
@@ -168,8 +170,9 @@ pub async fn create_or_update_mailbox(
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
         let password_hash = mk_password_hash(&password)?;
-        sqlx::query("INSERT INTO mailboxes (address, password_hash, active, owner) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO mailboxes (address, domain, password_hash, active, owner) VALUES (?, ?, ?, ?, ?)")
             .bind(address)
+            .bind(domain)
             .bind(password_hash)
             .bind(active)
             .bind(owner)
@@ -436,6 +439,7 @@ pub fn Mailboxes(user: User, reload_stats: Callback<()>) -> impl IntoView {
                             <TableContent
                                 rows
                                 sorting=sorting
+                                sorting_mode=SortingMode::SingleColumn
                                 row_renderer=mailbox_row_renderer
                                 reload_controller=reload_controller
                                 loading_row_display_limit=0

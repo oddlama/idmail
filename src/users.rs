@@ -430,6 +430,7 @@ pub fn Users() -> impl IntoView {
                             <TableContent
                                 rows
                                 sorting=sorting
+                                sorting_mode=SortingMode::SingleColumn
                                 row_renderer=user_row_renderer
                                 reload_controller=reload_controller
                                 loading_row_display_limit=0

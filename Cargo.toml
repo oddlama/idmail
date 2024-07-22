@@ -27,7 +27,7 @@ hex = "0.4.3"
 http = "1.0"
 icondata = "0.3.0"
 leptos = { version = "0.6", features = ["nightly"] }
-leptos-struct-table = "0.9.1"
+leptos-struct-table = "0.10.2"
 leptos-use = "0.10"
 leptos_axum = { version = "0.6", optional = true }
 leptos_icons = "0.3.0"

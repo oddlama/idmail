@@ -3,7 +3,8 @@ use crate::{
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
-    users::{AccountSettings, Users}, utils::ColorModeToggle,
+    users::{AccountSettings, Users},
+    utils::ColorModeToggle,
 };
 use chrono::{Months, Utc};
 use leptos::{html::Div, *};

@@ -173,7 +173,7 @@ pub async fn create_or_update_alias(
         &user.username
     } else {
         // Normal users must use the target as an owner
-        &target
+        target
     };
 
     // Empty owner -> self owned
@@ -185,6 +185,8 @@ pub async fn create_or_update_alias(
     if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE aliases SET address = ");
         query.push_bind(address);
+        query.push(", domain = ");
+        query.push_bind(domain);
         query.push(", target = ");
         query.push_bind(target);
         query.push(", comment = ");
@@ -201,8 +203,9 @@ pub async fn create_or_update_alias(
 
         query.build().execute(&pool).await.map(|_| ())?;
     } else {
-        sqlx::query("INSERT INTO aliases (address, target, comment, active, owner) VALUES (?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO aliases (address, domain, target, comment, active, owner) VALUES (?, ?, ?, ?, ?, ?)")
             .bind(address)
+            .bind(domain)
             .bind(target)
             .bind(comment)
             .bind(active)
@@ -259,7 +262,7 @@ impl TableDataProvider<Alias> for AliasTableDataProvider {
     }
 
     fn set_sorting(&mut self, sorting: &VecDeque<(usize, ColumnSort)>) {
-        self.sort = sorting.clone();
+        self.sort.clone_from(sorting);
     }
 
     fn track(&self) {
@@ -368,10 +371,8 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
             set_edit_modal_input_owner(username.clone());
             if is_mailbox {
                 set_edit_modal_input_target(username.clone());
-            } else {
-                if !allowed_targets.contains(&edit_modal_input_target()) {
-                    set_edit_modal_input_target(allowed_targets.first().cloned().unwrap_or("".to_string()));
-                }
+            } else if !allowed_targets.contains(&edit_modal_input_target()) {
+                set_edit_modal_input_target(allowed_targets.first().cloned().unwrap_or("".to_string()));
             }
             set_edit_modal_input_comment("".to_string());
             set_edit_modal_input_active(true);
@@ -505,6 +506,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                             <TableContent
                                 rows
                                 sorting=sorting
+                                sorting_mode=SortingMode::SingleColumn
                                 row_renderer=alias_row_renderer
                                 reload_controller=reload_controller
                                 loading_row_display_limit=0

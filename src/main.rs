@@ -26,8 +26,6 @@ async fn server_fn_handler(
     path: Path<String>,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
-    info!("{:?}", path);
-
     handle_server_fns_with_context(
         move || {
             provide_context(auth_session.clone());
