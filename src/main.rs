@@ -23,7 +23,7 @@ use sqlx::{sqlite::SqliteConnectOptions, QueryBuilder, SqlitePool};
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     auth_session: AuthSession,
-    path: Path<String>,
+    _path: Path<String>,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
     handle_server_fns_with_context(
