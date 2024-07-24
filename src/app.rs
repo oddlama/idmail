@@ -315,7 +315,7 @@ pub fn Tab(
                                     </div>
                                 </div>
                                 <div class="overflow-hidden px-4 md:px-12">
-                                    <Show when=move || tab != Tab::AccountSettings>
+                                    <Show when=move || tab == Tab::Aliases>
                                         <div class="grid gap-4 lg:grid-cols-3">
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
@@ -360,25 +360,25 @@ pub fn Tab(
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <h3 class="tracking-tight text-sm font-medium">Total Received</h3>
+                                                    <h3 class="tracking-tight text-sm font-medium">Total received via aliases</h3>
                                                     <Icon icon=icondata::BsArrowDown class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
-                                                    <div class="text-2xl font-bold">+12,234</div>
+                                                    <div class="text-2xl font-bold">0</div>
                                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        +19% from last month
+                                                        +0 since last month
                                                     </p>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <h3 class="tracking-tight text-sm font-medium">Total Sent</h3>
+                                                    <h3 class="tracking-tight text-sm font-medium">Total sent via aliases</h3>
                                                     <Icon icon=icondata::BsArrowUp class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
-                                                    <div class="text-2xl font-bold">+573</div>
+                                                    <div class="text-2xl font-bold">0</div>
                                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        +201 since last hour
+                                                        +0 since last month
                                                     </p>
                                                 </div>
                                             </div>

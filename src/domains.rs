@@ -108,12 +108,13 @@ pub async fn domain_count() -> Result<usize, ServerFnError> {
 
 #[server]
 pub async fn delete_domain(domain: String) -> Result<(), ServerFnError> {
-    let user = crate::auth::auth_user().await?;
+    // Creating/Deleting only as admin!
+    let user = crate::auth::auth_admin().await?;
 
     let mut query = QueryBuilder::new("DELETE FROM domains WHERE domain = ");
     query.push_bind(domain);
 
-    // Non-admins can only delete their own domains
+    // (Hypothetical) Non-admins can only delete their own domains
     if !user.admin {
         query.push(" AND owner = ");
         query.push_bind(&user.username);
@@ -133,7 +134,13 @@ pub async fn create_or_update_domain(
     active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
-    let user = crate::auth::auth_user().await?;
+    let user = if old_domain.is_some() {
+        // Editing is allowed for some users
+        crate::auth::auth_user().await?
+    } else {
+        // Creation only as admin.
+        crate::auth::auth_admin().await?
+    };
     let pool = crate::database::ssr::pool()?;
 
     // Only admins can assign other owners
@@ -145,10 +152,14 @@ pub async fn create_or_update_domain(
     // TODO: FIXME: invalid detect (empty, @@, ...)
 
     if let Some(old_domain) = old_domain {
-        let mut query = QueryBuilder::new("UPDATE domains SET domain = ");
-        query.push_bind(domain);
+        let mut query = QueryBuilder::new("UPDATE domains SET catch_all = ");
         query.push(", catch_all = ");
         query.push_bind(catch_all);
+        if user.admin {
+            // Only admins can edit the domain itself
+            query.push(", domain = ");
+            query.push_bind(domain);
+        }
         query.push(", public = ");
         query.push_bind(public);
         query.push(", active = ");
@@ -339,6 +350,7 @@ pub fn Domains(user: User) -> impl IntoView {
                             on:click=move |_| {
                                 delete_modal_domain.set(Some(delete_domain.clone()));
                             }
+                            disabled=move || !user.admin
                         >
 
                             <Icon icon=icondata::FiTrash2 class="w-5 h-5"/>
@@ -434,6 +446,7 @@ pub fn Domains(user: User) -> impl IntoView {
                     placeholder="example.com"
                     on:input=move |ev| set_edit_modal_input_domain(event_target_value(&ev))
                     prop:value=edit_modal_input_domain
+                    disabled=move || !user.admin
                 />
             </div>
             <div class="flex flex-col gap-2">

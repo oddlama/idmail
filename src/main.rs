@@ -62,7 +62,7 @@ async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sql
 async fn main() -> Result<()> {
     tracing_subscriber::fmt().without_time().init();
 
-    let pool = connect("aliases.db").await?;
+    let pool = connect("idmail.db").await?;
 
     // Auth section
     let session_config = SessionConfig::default().with_table_name("axum_sessions");
