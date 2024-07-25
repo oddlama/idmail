@@ -162,7 +162,7 @@ pub async fn create_addy_io(
     let (address, _, domain) = create_random_alias(
         &app_state,
         &user,
-        (!body.domain.is_empty()).then_some(body.domain),
+        (!body.domain.is_empty() && body.domain != "random").then_some(body.domain),
         &description,
     )
     .await?;
