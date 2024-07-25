@@ -4,7 +4,7 @@ use axum::{
     extract::{Path, State},
     http::Request,
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use axum_session::{SessionConfig, SessionLayer, SessionStore};
@@ -112,6 +112,8 @@ async fn main() -> Result<()> {
     // build our application with a route
     let app = Router::new()
         .route("/api/*fn_name", get(server_fn_handler).post(server_fn_handler))
+        .route("/api/alias/random/new", post(idmail::api::create_simple_login))
+        .route("/api/v1/aliases", post(idmail::api::create_addy_io))
         .leptos_routes_with_handler(routes, get(leptos_routes_handler))
         .fallback(file_and_error_handler)
         .layer(

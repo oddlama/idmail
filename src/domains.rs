@@ -44,12 +44,13 @@ pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
     let user = crate::auth::auth_any().await?;
 
     let mut query = QueryBuilder::new("SELECT domain FROM domains");
-    query.push(" WHERE public = TRUE OR owner = ");
+    query.push(" WHERE active = TRUE AND (public = TRUE OR owner = ");
     query.push_bind(&user.username);
     if let Some(mailbox_owner) = user.mailbox_owner {
         query.push(" OR owner = ");
         query.push_bind(mailbox_owner.clone());
     }
+    query.push(")");
 
     let pool = crate::database::ssr::pool()?;
     Ok(query.build_query_scalar::<String>().fetch_all(&pool).await?)

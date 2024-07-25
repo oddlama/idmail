@@ -1,4 +1,4 @@
-[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#-api-endpoints) \| [Stalwart configuration](#-stalwart-configuration)
+[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#%EF%B8%8F-api-endpoints) \| [Stalwart configuration](#%EF%B8%8F-stalwart-configuration)
 
 <p float="left">
     <img src="https://github.com/user-attachments/assets/d48ed681-950d-41f3-bce9-dac1acf09bae" height="250" />
@@ -88,8 +88,8 @@ export LEPTOS_SITE_ADDR="0.0.0.0:3000"
 ```
 
 You can host binary in any way you prefer (Docker, systemd services, ...).
-Afterwards, configure your mailserver to utilize the database for lookups ([see Stalwart configuration](#-stalwart-configuration))
-and optionally configure your password manager to use one of the provided [API Endpoints](#-api-endpoints).
+Afterwards, configure your mailserver to utilize the database for lookups ([see Stalwart configuration](#%EF%B8%8F-stalwart-configuration))
+and optionally configure your password manager to use one of the provided [API Endpoints](#%EF%B8%8F-api-endpoints).
 
 ## ☁️ API Endpoints
 

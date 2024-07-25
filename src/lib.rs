@@ -1,4 +1,6 @@
 pub mod aliases;
+#[cfg(feature = "ssr")]
+pub mod api;
 pub mod app;
 pub mod auth;
 pub mod database;

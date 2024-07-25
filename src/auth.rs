@@ -46,6 +46,27 @@ pub mod ssr {
 
             Some(user)
         }
+
+        pub async fn get_by_api_token(api_token: &str, pool: &SqlitePool) -> Option<Self> {
+            let user = sqlx::query_as::<_, User>(
+                "SELECT address AS username, password_hash, owner AS mailbox_owner, FALSE AS admin, active \
+                FROM mailboxes WHERE api_token = $1",
+            )
+            .bind(api_token)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+
+            if !user.active {
+                log::warn!(
+                    "denying successful api token because user '{}' is inactive",
+                    user.username
+                );
+                return None;
+            }
+
+            Some(user)
+        }
     }
 
     #[async_trait]
