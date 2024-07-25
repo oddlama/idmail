@@ -83,7 +83,7 @@ cargo leptos build --release -vvv
 You can then run the server like this:
 
 ```
-export LEPTOS_SITE_ADDR="0.0.0.0:3000"
+export LEPTOS_SITE_ADDR="0.0.0.0:3000" # only if you want to change listen address or port
 ./target/release/idmail
 ```
 
@@ -94,7 +94,7 @@ and optionally configure your password manager to use one of the provided [API E
 ## ☁️ API Endpoints
 
 API endpoints are provided which allow you to generate random aliases ,
-compatible with those provided by [SimpleLogin](https://simplelogin.io/) or [addy.io (AnonAddy)](https://addy.io/).
+compatible with those provided by [addy.io (AnonAddy)](https://addy.io/) or [SimpleLogin](https://simplelogin.io/).
 This means you can use it with a password manager to automatically create aliases for your logins.
 
 The aliases will be generated via the [`faker_rand` Username](https://docs.rs/faker_rand/latest/faker_rand/en_us/internet/struct.Username.html) generator,
@@ -138,18 +138,96 @@ jazminbeatty@example.com
 ```
 </details>
 
-#### SimpleLogin compatible endpoint
+There are two different API endpoints available:
 
-Example request:
+- addy.io compatible: Allows you to select a domain. A random avaliable domain is selected by the server if left empty or filled with the special value `random`.
+- SimpleLogin compatible: Does not allow selecting a domain, so a random available domain is always selected
+
+Both endpoints always generate the same random usernames and ignore any format options in case the original API provides those.
+
+#### addy.io compatible endpoint
+
+- Url: `https://idmail.example.com/api/v1/aliases`
+- Method: `POST`
+- Token: Via header `Authorization: Bearer {token}`
+- Success: `201`
+
+<details>
+<summary>Example request and response (curl)</summary>
+
+Request:
 
 ```
-curl https://idmail.yourdomain.tld/api/SimpleLogin
+curl -X POST \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -H "Authorization: Bearer {token}" \
+    --data '{"domain":"example.com","description":"An optional comment added to the entry"}'
+    localhost:3000/api/v1/aliases
 ```
 
 Response:
 
+```json
+{
+    "data": {
+        "active": true,
+        "aliasable_id": null,
+        "aliasable_type": null,
+        "created_at": "2000-01-01 00:00:00",
+        "deleted_at": null,
+        "description": "An optional comment added to the entry",
+        "domain": "example.com",
+        "email": "zhoppe26@example.com",
+        "emails_blocked": 0,
+        "emails_forwarded": 0,
+        "emails_replied": 0,
+        "emails_sent": 0,
+        "extension": null,
+        "from_name": null,
+        "id": "00000000-0000-0000-0000-000000000000",
+        "last_blocked": null,
+        "last_forwarded": "2000-01-01 00:00:00",
+        "last_replied": null,
+        "last_sent": null,
+        "local_part": "00000000-0000-0000-0000-000000000000",
+        "recipients": [],
+        "updated_at": "2000-01-01 00:00:00",
+        "user_id": "00000000-0000-0000-0000-000000000000"
+    }
+}
 ```
+</details>
+
+#### SimpleLogin compatible endpoint
+
+- Url: `https://idmail.example.com/api/alias/random/new`
+- Method: `POST`
+- Token: Via header `Authorization: {token}`
+- Success: `201`
+
+<details>
+<summary>Example request and response (curl)</summary>
+
+Request:
+
 ```
+> curl -X POST \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -H "Authorization: {token}" \
+    --data '{"note":"A comment added to the entry"}' \
+    localhost:3000/api/alias/random/new
+```
+
+Response:
+
+```json
+{
+    "alias": "zhoppe26@example.com"
+}
+```
+</details>
 
 ## ⚙️ Stalwart configuration
 

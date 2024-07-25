@@ -111,7 +111,7 @@ async fn create_random_alias(
         .bind(&address)
         .bind(&domain)
         .bind(target)
-        .bind(&comment)
+        .bind(comment)
         .bind(true)
         .bind(owner)
         .execute(&app_state.pool)
