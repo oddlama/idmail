@@ -120,6 +120,23 @@ pub async fn alias_count(active: Option<bool>, since: Option<DateTime<Utc>>) -> 
     Ok(count as usize)
 }
 
+/// Sum message counts on all aliases
+#[server]
+pub async fn count_sent_or_received(sent: bool) -> Result<usize, ServerFnError> {
+    let user = crate::auth::auth_any().await?;
+
+    let col_name = if sent { "n_sent" } else { "n_recv" };
+    let mut query = QueryBuilder::new(format!("SELECT SUM({col_name}) FROM aliases WHERE 1=1"));
+    if !user.admin {
+        push_and_check_aliases_owner(&mut query, user.username.clone());
+    }
+
+    let pool = crate::database::ssr::pool()?;
+    let count = query.build_query_scalar::<i64>().fetch_one(&pool).await?;
+
+    Ok(count as usize)
+}
+
 #[server]
 pub async fn delete_alias(address: String) -> Result<(), ServerFnError> {
     let user = crate::auth::auth_any().await?;

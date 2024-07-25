@@ -1,5 +1,5 @@
 use crate::{
-    aliases::{alias_count, Aliases},
+    aliases::{alias_count, count_sent_or_received, Aliases},
     auth::{get_user, Login, LoginView, Logout},
     domains::Domains,
     mailboxes::Mailboxes,
@@ -199,6 +199,8 @@ pub fn Tab(
 
     let active_alias_count = create_resource(|| (), |_| async move { alias_count(Some(true), None).await });
     let inactive_alias_count = create_resource(|| (), |_| async move { alias_count(Some(false), None).await });
+    let total_recv_via_aliases = create_resource(|| (), |_| async move { count_sent_or_received(false).await });
+    let total_sent_via_aliases = create_resource(|| (), |_| async move { count_sent_or_received(true).await });
     let new_since_last_month = create_resource(
         || (),
         |_| async move { alias_count(None, Some(Utc::now() - Months::new(1))).await },
@@ -206,6 +208,8 @@ pub fn Tab(
     let reload_stats = Callback::new(move |_: ()| {
         active_alias_count.refetch();
         inactive_alias_count.refetch();
+        total_recv_via_aliases.refetch();
+        total_sent_via_aliases.refetch();
     });
 
     view! {
@@ -364,10 +368,16 @@ pub fn Tab(
                                                     <Icon icon=icondata::BsArrowDown class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
-                                                    <div class="text-2xl font-bold">0</div>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        +0 since last month
-                                                    </p>
+                                                    <div class="text-2xl font-bold">
+                                                        <Transition fallback=move || {
+                                                            view! { <span class="animate-pulse">"..."</span> }
+                                                        }>
+                                                            {move || match total_recv_via_aliases.get() {
+                                                                Some(Ok(count)) => view! { {count} }.into_view(),
+                                                                _ => view! {}.into_view(),
+                                                            }}
+                                                        </Transition>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
@@ -376,10 +386,16 @@ pub fn Tab(
                                                     <Icon icon=icondata::BsArrowUp class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
-                                                    <div class="text-2xl font-bold">0</div>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        +0 since last month
-                                                    </p>
+                                                    <div class="text-2xl font-bold">
+                                                        <Transition fallback=move || {
+                                                            view! { <span class="animate-pulse">"..."</span> }
+                                                        }>
+                                                            {move || match total_sent_via_aliases.get() {
+                                                                Some(Ok(count)) => view! { {count} }.into_view(),
+                                                                _ => view! {}.into_view(),
+                                                            }}
+                                                        </Transition>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
