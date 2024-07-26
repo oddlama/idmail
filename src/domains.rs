@@ -150,7 +150,9 @@ pub async fn create_or_update_domain(
     let owner = if owner.is_empty() { &user.username } else { owner };
     // Only admins may create public domains
     let public = public && user.admin;
-    // TODO: FIXME: invalid detect (empty, @@, ...)
+    if domain.is_empty() {
+        return Err(ServerFnError::new("domain cannot be empty"));
+    }
 
     if let Some(old_domain) = old_domain {
         let mut query = QueryBuilder::new("UPDATE domains SET catch_all = ");
