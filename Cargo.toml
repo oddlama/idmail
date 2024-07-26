@@ -1,9 +1,13 @@
 [package]
 name = "idmail"
-version = "0.1.0"
 edition = "2021"
+version = "0.1.0"
 authors = ["oddlama <oddlama@oddlama.org>"]
-description = "TODO"
+description = "An email alias and account management interface for self-hosted mailservers"
+homepage = "https://github.com/oddlama/idmail"
+repository = "https://github.com/oddlama/idmail"
+keywords = ["email", "alias", "leptos", "web", "wasm"]
+categories = []
 license = "MIT"
 
 [lib]
