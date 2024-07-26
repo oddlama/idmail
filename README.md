@@ -77,6 +77,7 @@ If you want to build it yourself instead, you can do so by executing:
 
 ```bash
 export RUSTFLAGS="--cfg=web_sys_unstable_apis"
+export LEPTOS_ENV="PROD"
 cargo leptos build --release -vvv
 ```
 
@@ -239,6 +240,24 @@ Response:
 </details>
 </details>
 
+## ⛔ Reserved addresses
+
+For security purposes, we always reserved a list of special mailbox/alais names which only the domain owner (or admin) may create.
+The list currently contains:
+
+```
+abuse
+admin
+hostmaster
+info
+no-reply
+postmaster
+root
+security
+support
+webmaster
+```
+
 ## ⚙️ Stalwart configuration
 
 To integrate the idmail sqlite database with your stalwart server, you need to make
@@ -256,5 +275,4 @@ submitted for inclusion in this project by you, shall be licensed as above, with
 
 ## WIP
 
-- [ ] reserve special addresses on domain creation? postmaster@ admin@ no-reply@ ...
 - [ ] if delete_alias takes long, and the user closes the dialog and opens another, then the result can close the new dialog.

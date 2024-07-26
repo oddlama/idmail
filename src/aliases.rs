@@ -51,16 +51,16 @@ pub(crate) fn validate_address(localpart: &str, domain: &str, allow_reserved: bo
     if !allow_reserved
         && matches!(
             localpart,
-            "postmaster"
-                | "abuse"
+            "abuse"
                 | "admin"
-                | "root"
-                | "webmaster"
                 | "hostmaster"
-                | "support"
                 | "info"
-                | "security"
                 | "no-reply"
+                | "postmaster"
+                | "root"
+                | "security"
+                | "support"
+                | "webmaster"
         )
     {
         bail!("'{address}' is a reserved address");

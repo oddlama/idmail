@@ -643,7 +643,13 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
 
                     disabled=user.mailbox_owner.is_none()
                 >
-                    "Regenerate API Token"
+                    {
+                        if user.mailbox_owner.is_none() {
+                            "Regenerate API Token (login as a mailbox first)"
+                        } else {
+                            "Regenerate API Token"
+                        }
+                    }
                 </button>
             </div>
         </div>
