@@ -6,16 +6,21 @@
 }: let
   inherit
     (lib)
+    filterAttrsRecursive
     getExe
     mkEnableOption
     mkIf
     mkOption
     mkPackageOption
+    removeAttrs
     types
     ;
 
   cfg = config.services.idmail;
   dataDir = "/var/lib/idmail";
+
+  provisionWithoutNull = filterAttrsRecursive (_: v: v != null) (removeAttrs cfg.provision ["enable"]);
+  provisionToml = (pkgs.formats.toml {}).generate "idmail-provision.toml" provisionWithoutNull;
 in {
   options.services.idmail = {
     enable = mkEnableOption "idmail";
@@ -38,6 +43,135 @@ in {
       default = 3000;
       description = "Port to bind to";
     };
+
+    provision = {
+      enable = mkEnableOption "provisioning of idmail";
+
+      users = mkOption {
+        type = types.attrsOf (types.submodule {
+          options = {
+            password_hash = mkOption {
+              type = types.str;
+              description = ''
+                Password hash, should be a argon2id hash.
+                Can be generated with: `echo -n "whatever" | argon2 somerandomsalt -id`
+                Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+              '';
+            };
+            admin = mkOption {
+              type = types.bool;
+              default = false;
+              description = ''Whether the user should be an admin.'';
+            };
+            active = mkOption {
+              type = types.bool;
+              default = true;
+              description = ''Whether the user should be active.'';
+            };
+          };
+        });
+      };
+
+      domains = mkOption {
+        type = types.attrsOf (types.submodule {
+          options = {
+            owner = mkOption {
+              type = types.str;
+              description = ''
+                The user which owns this domain. Allows that user to modify
+                the catch all address and the domain's active state.
+                Creation and deletion of any domain is always restricted to admins only.
+              '';
+            };
+            catch_all = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = ''A catch-all address for this domain.'';
+            };
+            public = mkOption {
+              type = types.bool;
+              default = false;
+              description = ''
+                Whether the domain should be available for use by any registered
+                user instead of just the owner. Admins can always use any domain,
+                regardless of this setting.
+              '';
+            };
+            active = mkOption {
+              type = types.bool;
+              default = true;
+              description = ''Whether the domain should be active.'';
+            };
+          };
+        });
+      };
+
+      mailboxes = mkOption {
+        type = types.attrsOf (types.submodule {
+          options = {
+            password_hash = mkOption {
+              type = types.str;
+              description = ''
+                Password hash, should be a argon2id hash.
+                Can be generated with: `echo -n "whatever" | argon2 somerandomsalt -id`
+                Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+              '';
+            };
+            owner = mkOption {
+              type = types.str;
+              description = ''The user which owns this mailbox. That user has full control over the mailbox and its aliases.'';
+            };
+            api_token = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = ''
+                An API token for this mailbox to allow alias creation via the API endpoints.
+                Optional. Default: None (API access disabled)
+                Minimum length 16. Must be unique!
+                Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+              '';
+            };
+            active = mkOption {
+              type = types.bool;
+              default = true;
+              description = ''Whether the mailbox should be active.'';
+            };
+          };
+        });
+      };
+
+      aliases = mkOption {
+        type = types.attrsOf (types.submodule {
+          options = {
+            target = mkOption {
+              type = types.str;
+              description = ''
+                The target address for this alias. The WebUI restricts users to only
+                target mailboxes they own. Admins and this provisioning file
+                have no such restrictions.
+              '';
+            };
+            owner = mkOption {
+              type = types.str;
+              description = ''
+                The user/mailbox which owns this alias. If owned by a mailbox,
+                the user owning the mailbox transitively owns this.
+              '';
+            };
+            comment = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = ''A comment to store alongside this alias.'';
+            };
+            active = mkOption {
+              type = types.bool;
+              default = true;
+              description = ''Whether the alias should be active.'';
+            };
+          };
+        });
+      };
+    };
   };
 
   config = mkIf cfg.enable {
@@ -56,6 +190,7 @@ in {
       after = ["network.target"];
 
       environment.LEPTOS_SITE_ADDR = "${cfg.host}:${toString cfg.port}";
+      environment.IDMAIL_PROVISION = mkIf cfg.provision.enable provisionToml;
       serviceConfig = {
         Restart = "on-failure";
         ExecStart = getExe cfg.package;

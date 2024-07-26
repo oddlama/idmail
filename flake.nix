@@ -112,8 +112,12 @@
         });
 
         packages.default = config.nci.outputs.${projectName}.packages.release;
-        formatter = pkgs.alejandra; # `nix fmt`
+        packages.nixosTest = import ./nix/tests/idmail.nix {
+          self = inputs.self;
+          inherit pkgs lib;
+        };
 
+        formatter = pkgs.alejandra; # `nix fmt`
         overlayAttrs = {
           idmail = config.packages.default;
         };

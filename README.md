@@ -86,7 +86,7 @@ or view the module source for more information.
     };
     mailboxes."me@example.com" = {
       password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$fiD9Bp3KidVI/E+mGudu6+h9XmF9TU9Bx4VGX0PniDE";
-      owner = "username";
+      owner = "admin";
       #api_token = "VC0lZ6O49nfxU4oK0KbahlSMsqBFiHyYFGUQvzzki6ky5mSM"; # Please don't hardcode api tokens
       api_token = "%{file:/path/to/secret}%";
     };
