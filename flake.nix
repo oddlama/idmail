@@ -101,6 +101,10 @@
 
         packages.default = config.nci.outputs.${projectName}.packages.release;
         formatter = pkgs.alejandra; # `nix fmt`
+
+        overlayAttrs = {
+          idmail = config.packages.default;
+        };
       };
     };
 }
