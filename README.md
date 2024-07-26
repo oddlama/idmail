@@ -294,6 +294,10 @@ support
 webmaster
 ```
 
+> [!WARNING]
+> Never use an admin account to create mailboxes for other people, as it allows
+> them to use these reserved addresses! (if the mailbox is owner is the domain owner)
+
 ## ⚙️ Stalwart configuration
 
 To integrate the idmail sqlite database with your stalwart server, you need to make

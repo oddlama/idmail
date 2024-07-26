@@ -146,11 +146,11 @@ pub async fn create_or_update_mailbox(
 
     // Check if address is valid
     let allowed_domains = allowed_domains().await?;
-    let Some(db_domain) = allowed_domains.iter().find(|x| x.0 == domain) else {
+    let Some((_, domain_owner)) = allowed_domains.iter().find(|x| x.0 == domain) else {
         return Err(ServerFnError::new("domain must be set to a valid domain"));
     };
 
-    let address = validate_address(&localpart, &domain, user.admin || db_domain.1 == user.username)
+    let address = validate_address(&localpart, &domain, user.admin || *domain_owner == user.username)
         .map_err(ServerFnError::new)?;
 
     if let Some(old_address) = old_address {

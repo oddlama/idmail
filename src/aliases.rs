@@ -220,14 +220,14 @@ pub async fn create_or_update_alias(
 
     // Check if address is valid
     let allowed_domains = allowed_domains().await?;
-    let Some(db_domain) = allowed_domains.iter().find(|x| x.0 == domain) else {
+    let Some((_, domain_owner)) = allowed_domains.iter().find(|x| x.0 == domain) else {
         return Err(ServerFnError::new("domain must be set to a valid domain"));
     };
 
     let address = validate_address(
         &alias,
         &domain,
-        user.admin || db_domain.1 == user.username || user.mailbox_owner.is_some_and(|x| x == db_domain.1),
+        user.admin || *domain_owner == user.username || user.mailbox_owner.is_some_and(|x| x == *domain_owner),
     )
     .map_err(ServerFnError::new)?;
 
