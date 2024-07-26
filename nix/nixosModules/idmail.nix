@@ -29,8 +29,8 @@ in {
 
     host = mkOption {
       type = types.str;
-      description = "Host to bind to";
-      default = "localhost";
+      description = "Host to bind to, must be an IP address.";
+      default = "127.0.0.1";
     };
 
     port = mkOption {

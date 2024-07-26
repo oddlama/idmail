@@ -90,10 +90,10 @@
               '';
 
               meta = {
-                description = "An email alias and account management interface for self-hosted mailservers";
+                description = "idmail, an email alias and account management interface for self-hosted mailservers";
                 homepage = "https://github.com/oddlama/idmail";
                 license = lib.licenses.mit;
-                maintainers = with lib.maintainers; [oddlama];
+                #maintainers = with lib.maintainers; [oddlama];
                 mainProgram = "idmail";
               };
             };
