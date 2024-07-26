@@ -20,12 +20,22 @@
       imports = [
         inputs.nci.flakeModule
         inputs.pre-commit-hooks.flakeModule
+
+        # Derive the output overlay automatically from all packages that we define.
+        inputs.flake-parts.flakeModules.easyOverlay
       ];
 
       systems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      flake = {config, ...}: {
+        nixosModules.default = {
+          imports = [./nix/nixosModules/idmail.nix];
+          nixpkgs.overlays = [config.overlays.default];
+        };
+      };
 
       perSystem = {
         config,

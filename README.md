@@ -8,11 +8,11 @@
 > [!CAUTION]
 > THIS PROJECT IS ALMOST FINISHED, BUT NOT YET READY FOR USE!
 > We are in the final testing phase.
-> Send/received counters are currently WIP, and the public endpoints are not finished.
 
 ## 📧 idmail
 
-Idmail is an email alias and account management interface for self-hosted mailservers.
+Idmail is an email alias and account management interface for self-hosted mailservers,
+which you can use to hide your true email address from online services.
 This is NOT an email forwarding service like [addy.io](https://addy.io/)! Idmail is a frontend
 to a sqlite database which contains a table of mailboxes and aliases to be consumed by
 a mailsever like [Stalwart](https://stalw.art/), [maddy](https://maddy.email/), [Postfix](https://www.postfix.org/) or others.
@@ -242,7 +242,7 @@ Response:
 
 ## ⛔ Reserved addresses
 
-For security purposes, we always reserved a list of special mailbox/alais names which only the domain owner (or admin) may create.
+For security purposes, we always reserved a list of special mailbox/alias names which only the domain owner (or admin) may create.
 The list currently contains:
 
 ```
@@ -272,7 +272,3 @@ directory configuration:
 Licensed under the MIT license ([LICENSE](LICENSE) or <https://opensource.org/licenses/MIT>).
 Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in this project by you, shall be licensed as above, without any additional terms or conditions.
-
-## WIP
-
-- [ ] if delete_alias takes long, and the user closes the dialog and opens another, then the result can close the new dialog.
