@@ -83,7 +83,7 @@
               '';
 
               installPhase = ''
-                mkdir -p $out/bin
+                mkdir -p $out/bin $out/share
                 cp target/release/${projectName} $out/bin/
                 cp -r target/site $out/share/
                 wrapProgram $out/bin/${projectName} \
