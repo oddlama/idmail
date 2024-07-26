@@ -39,6 +39,7 @@
 
       perSystem = {
         config,
+        lib,
         pkgs,
         ...
       }: let
@@ -73,11 +74,13 @@
                 pkgs.cargo-leptos
                 tailwindcss
               ];
+
               # override build phase to build with trunk instead
               buildPhase = ''
                 export -n CARGO_BUILD_TARGET
                 cargo leptos build --release -vvv
               '';
+
               installPhase = ''
                 mkdir -p $out/bin
                 cp target/release/${projectName} $out/bin/
@@ -85,6 +88,14 @@
                 #wrapProgram $out/bin/${projectName} \
                 #  --set LEPTOS_SITE_ROOT $out/bin/site
               '';
+
+              meta = {
+                description = "An email alias and account management interface for self-hosted mailservers";
+                homepage = "https://github.com/oddlama/idmail";
+                license = lib.licenses.mit;
+                maintainers = with lib.maintainers; [oddlama];
+                mainProgram = "idmail";
+              };
             };
             env.RUSTFLAGS = "--cfg=web_sys_unstable_apis";
             env.LEPTOS_ENV = "PROD";
