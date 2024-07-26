@@ -69,6 +69,7 @@
             in {
               # add trunk and other dependencies
               nativeBuildInputs = [
+                pkgs.makeWrapper
                 pkgs.wasm-bindgen-cli
                 pkgs.binaryen
                 pkgs.cargo-leptos
@@ -84,9 +85,9 @@
               installPhase = ''
                 mkdir -p $out/bin
                 cp target/release/${projectName} $out/bin/
-                cp -r target/site $out/bin/
-                #wrapProgram $out/bin/${projectName} \
-                #  --set LEPTOS_SITE_ROOT $out/bin/site
+                cp -r target/site $out/share/
+                wrapProgram $out/bin/${projectName} \
+                  --set LEPTOS_SITE_ROOT $out/share/site
               '';
 
               meta = {
