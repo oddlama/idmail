@@ -1,4 +1,4 @@
-[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#%EF%B8%8F-api-endpoints) \| [Stalwart configuration](#%EF%B8%8F-stalwart-configuration) \| [Provisioning](#%EF%B8%8F-provisioning)
+[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#%EF%B8%8F-api-endpoints) \| [Stalwart configuration](#%EF%B8%8F-stalwart-configuration) \| [Provisioning](#-provisioning)
 
 <p float="left">
     <img src="https://github.com/user-attachments/assets/d48ed681-950d-41f3-bce9-dac1acf09bae" height="250" />
@@ -67,7 +67,7 @@ The database will be available under `/var/lib/idmail/idmail.db` for consumption
 the service listens on `127.0.0.1:3000` by default. The example above uses nginx to reverse proxy the application.
 If the admin user was not provisioned, it will be recovered on start and a generated password will be printed to the journal.
 
-You can provision anything by using the `services.idmail.provision` configuration. See [Provisioning](#%EF%B8%8F-provisioning)
+You can provision anything by using the `services.idmail.provision` configuration. See [Provisioning](#-provisioning)
 or view the module source for more information.
 
 ```nix
@@ -311,7 +311,7 @@ directory configuration:
 
 To support declarative deployment you can provision users, domains, mailboxes and aliases out of the box.
 This works by pointing the environment variable `IDMAIL_PROVISION` to a toml file containing the desired state.
-The application automatically tracks provisioned entities and ensures that they will be automatically removed
+The application automatically tracks provisioned entities and ensures that they will automatically be removed
 again if you remove them from the state file, without touching entities that were created dynamically by you our your users.
 This will *not* cascade deletion, so removing a domain will not touch any dependent aliases or mailboxes. The mailserver queries
 should always validate combinations by joining the appropriate tables.
