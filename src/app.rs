@@ -364,7 +364,9 @@ pub fn Tab(
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <h3 class="tracking-tight text-sm font-medium">Total received via aliases</h3>
+                                                    <h3 class="tracking-tight text-sm font-medium">
+                                                        Total received via aliases
+                                                    </h3>
                                                     <Icon icon=icondata::BsArrowDown class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
@@ -376,13 +378,16 @@ pub fn Tab(
                                                                 Some(Ok(count)) => view! { {count} }.into_view(),
                                                                 _ => view! {}.into_view(),
                                                             }}
+
                                                         </Transition>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="rounded-xl border-[1.5px] border-gray-200 dark:border-zinc-800">
                                                 <div class="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <h3 class="tracking-tight text-sm font-medium">Total sent via aliases</h3>
+                                                    <h3 class="tracking-tight text-sm font-medium">
+                                                        Total sent via aliases
+                                                    </h3>
                                                     <Icon icon=icondata::BsArrowUp class="w-5 h-5"/>
                                                 </div>
                                                 <div class="p-4 pt-0">
@@ -394,6 +399,7 @@ pub fn Tab(
                                                                 Some(Ok(count)) => view! { {count} }.into_view(),
                                                                 _ => view! {}.into_view(),
                                                             }}
+
                                                         </Transition>
                                                     </div>
                                                 </div>

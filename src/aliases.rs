@@ -8,11 +8,14 @@ use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, Tim
 
 use anyhow::bail;
 use chrono::{DateTime, Utc};
+use faker_rand::en_us::internet::Username;
 use leptos::leptos_dom::is_browser;
 use leptos::{ev::MouseEvent, logging::error, *};
 use leptos_icons::Icon;
 use leptos_struct_table::*;
 use leptos_use::use_debounce_fn_with_arg;
+use rand::rngs::OsRng;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::QueryBuilder;
@@ -546,7 +549,13 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
                     <button
                         type="button"
                         class="inline-flex flex-none items-center justify-center whitespace-nowrap font-medium text-base text-white dark:text-zinc-100 py-2.5 px-4 me-2 mb-2 transition-all rounded-lg focus:ring-4 bg-green-600 dark:bg-green-700 hover:bg-green-500 dark:hover:bg-green-600 focus:ring-green-300 dark:focus:ring-green-900"
+                        on:click=move |_| {
+                            edit_modal_open_with(None);
+                            let alias = OsRng.gen::<Username>().to_string();
+                            set_edit_modal_input_alias(alias.to_string());
+                        }
                     >
+
                         <Icon icon=icondata::FaDiceSolid class="w-6 h-6 me-2"/>
                         "New Random"
                     </button>

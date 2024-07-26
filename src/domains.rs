@@ -351,6 +351,7 @@ pub fn Domains(user: User) -> impl IntoView {
                             on:click=move |_| {
                                 delete_modal_domain.set(Some(delete_domain.clone()));
                             }
+
                             disabled=move || !user.admin
                         >
 
