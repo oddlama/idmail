@@ -13,6 +13,7 @@ use idmail::{
     app::App,
     auth::{ssr::AuthSession, User},
     fileserv::file_and_error_handler,
+    provision::provision,
     state::AppState,
 };
 use leptos::{get_configuration, provide_context};
@@ -72,6 +73,9 @@ async fn main() -> Result<()> {
         SessionStore::<SessionSqlitePool>::new(Some(SessionSqlitePool::from(pool.clone())), session_config).await?;
 
     sqlx::migrate!().run(&pool).await?;
+
+    // Provisioning
+    provision(&pool).await?;
 
     // Create admin user if none exist
     let admin_user_exists = QueryBuilder::new("SELECT COUNT(*) FROM users WHERE username = 'admin'")

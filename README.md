@@ -1,4 +1,4 @@
-[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#%EF%B8%8F-api-endpoints) \| [Stalwart configuration](#%EF%B8%8F-stalwart-configuration)
+[Installation](#-installation) \| [Building](#-building) \| [API Endpoints](#%EF%B8%8F-api-endpoints) \| [Stalwart configuration](#%EF%B8%8F-stalwart-configuration) \| [Provisioning](#%EF%B8%8F-provisioning)
 
 <p float="left">
     <img src="https://github.com/user-attachments/assets/d48ed681-950d-41f3-bce9-dac1acf09bae" height="250" />
@@ -24,6 +24,7 @@ The following features are available:
 - 🔑 API endpoint allows integration with password managers (Bitwarden, ...)
 - 📈 Track sent/received statistics per alias
 - 🌌 Per-domain catch-all
+- 🌟 Provisioning support
 
 If you login with a mailbox account, you can change the mailbox password and manage its aliases.
 Mailbox accounts can use the API to create new aliases with the API token from their settings page.
@@ -46,23 +47,57 @@ on how to build and deploy this application.
 Installation under NixOS is straightforward. This repository provides an overlay and NixOS module for
 simple deployment.
 
-TODO
-- Add as flake
-- add overlay
-- add nixos module
-
 Afterwards, simply enable the service:
 
 ```nix
 {
-  services.idmail = {
-    enable = true;
-    openFirewall = true;
+  services.idmail.enable = true;
+
+  services.nginx.virtualHosts."alias.example.com" = {
+    forceSSL = true;
+    locations."/" = {
+      proxyPass = "http://localhost:3000";
+      proxyWebsockets = true;
+    };
   };
 }
 ```
 
-The database will be available under `/var/lib/idmail/idmail.db` for consumption by other services.
+The database will be available under `/var/lib/idmail/idmail.db` for consumption by other services,
+the service listens on `127.0.0.1:3000` by default. The example above uses nginx to reverse proxy the application.
+If the admin user was not provisioned, it will be recovered on start and a generated password will be printed to the journal.
+
+You can provision anything by using the `services.idmail.provision` configuration. See [Provisioning](#%EF%B8%8F-provisioning)
+or view the module source for more information.
+
+```nix
+{
+  services.idmail.provision = {
+    enable = true;
+    users.admin = {
+      admin = true;
+      # Generate hash with `echo -n "password" | nix run nixpkgs#libargon2 -- somerandomsalt -id`
+      password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$DXdfVNRSFS1QSvJo7OmXIhAYYtT/D92Ku16DiJwxn8U";
+      #password_hash = "%{file:/path/to/secret}%"; # Or read a file at runtime
+    };
+    domains."example.com" = {
+      owner = "admin";
+      public = true;
+    };
+    mailboxes."me@example.com" = {
+      password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$fiD9Bp3KidVI/E+mGudu6+h9XmF9TU9Bx4VGX0PniDE";
+      owner = "username";
+      #api_token = "VC0lZ6O49nfxU4oK0KbahlSMsqBFiHyYFGUQvzzki6ky5mSM"; # Please don't hardcode api tokens
+      api_token = "%{file:/path/to/secret}%";
+    };
+    aliases."somealias@example.com" = {
+      target = "me@example.com";
+      owner = "me@example.com";
+      comment = "Used for xyz";
+    };
+  };
+}
+```
 
 ## 🧰 Building
 
@@ -91,6 +126,7 @@ export LEPTOS_SITE_ADDR="0.0.0.0:3000" # only if you want to change listen addre
 You can host binary in any way you prefer (Docker, systemd services, ...).
 Afterwards, configure your mailserver to utilize the database for lookups ([see Stalwart configuration](#%EF%B8%8F-stalwart-configuration))
 and optionally configure your password manager to use one of the provided [API Endpoints](#%EF%B8%8F-api-endpoints).
+If the admin user doesn't exist on start, it will be recovered and a generated password will be printed to stdout.
 
 ## ☁️ API Endpoints
 
@@ -265,6 +301,92 @@ the stalwart server be able to access the database file and add the following
 directory configuration:
 
 ```toml
+```
+
+## 🌟 Provisioning
+
+To support declarative deployment you can provision users, domains, mailboxes and aliases out of the box.
+This works by pointing the environment variable `IDMAIL_PROVISION` to a toml file containing the desired state.
+The application automatically tracks provisioned entities and ensures that they will be automatically removed
+again if you remove them from the state file, without touching entities that were created dynamically by you our your users.
+This will *not* cascade deletion, so removing a domain will not touch any dependent aliases or mailboxes. The mailserver queries
+should always validate combinations by joining the appropriate tables.
+
+The state file has the format shown below:
+
+```toml
+[users."username"]
+# Password hash, should be a argon2id hash.
+# Can be generated with: `echo -n "whatever" | argon2 somerandomsalt -id`
+# Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$DXdfVNRSFS1QSvJo7OmXIhAYYtT/D92Ku16DiJwxn8U"
+# Whether the user should be an admin.
+# Optional, default: false
+admin = false
+# Whether the user should be active
+# Optional, default: true
+active = true
+
+[domains."example.com"]
+# The user which owns this domain. Allows that user to modify
+# the catch all address and the domain's active state.
+# Creation and deletion of any domain is always restricted to admins only.
+owner = "username"
+# A catch-all address for this domain.
+# Optional. Default: None
+catch_all = "postmaster@example.com"
+# Whether the domain should be available for use by any registered
+# user instead of just the owner. Admins can always use any domain,
+# regardless of this setting.
+# Optional, default: false
+public = false
+# Whether the domain should be active
+# Optional, default: true
+active = true
+
+[mailboxes."me@example.com"]
+# Password hash, should be a argon2id hash.
+# Can be generated with: `echo -n "whatever" | argon2 somerandomsalt -id`
+# Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$fiD9Bp3KidVI/E+mGudu6+h9XmF9TU9Bx4VGX0PniDE"
+# The user which owns this mailbox. That user has full control over the mailbox and its aliases.
+owner = "username"
+# An API token for this mailbox to allow alias creation via the API endpoints.
+# Optional. Default: None (API access disabled)
+# Minimum length 16. Must be unique!
+# Also accepts "%{file:/path/to/secret}%" to refer to the contents of a file.
+api_token = "VC0lZ6O49nfxU4oK0KbahlSMsqBFiHyYFGUQvzzki6ky5mSM"
+#api_token = "%{file:/path/to/secret}%"
+# Whether the mailbox should be active
+# Optional, default: true
+active = true
+
+[aliases."somealias@example.com"]
+# The target address for this alias. The WebUI restricts users to only
+# target mailboxes they own. Admins and this provisioning file
+# have no such restrictions.
+target = "me@example.com"
+# The user/mailbox which owns this alias. If owned by a mailbox,
+# the user owning the mailbox transitively owns this.
+owner = "me@example.com"
+# A comment to store alongside this alias.
+# Optional, default: None
+comment = "Used for xyz"
+# Whether the user should be active
+# Optional, default: true
+active = true
+```
+
+Small example which creates an admin user and one domain:
+
+```toml
+[users.admin]
+password_hash = "$argon2id$v=19$m=4096,t=3,p=1$YXJnbGluYXJsZ2luMjRvaQ$DXdfVNRSFS1QSvJo7OmXIhAYYtT/D92Ku16DiJwxn8U"
+admin = true
+
+[domains."example.com"]
+owner = "admin"
+public = true
 ```
 
 ## 📜 License

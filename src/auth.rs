@@ -48,6 +48,11 @@ pub mod ssr {
         }
 
         pub async fn get_by_api_token(api_token: &str, pool: &SqlitePool) -> Option<Self> {
+            if api_token.len() < 16 {
+                // Disregard insecure API tokens directly
+                return None;
+            }
+
             let user = sqlx::query_as::<_, User>(
                 "SELECT address AS username, password_hash, owner AS mailbox_owner, FALSE AS admin, active \
                 FROM mailboxes WHERE api_token = $1",

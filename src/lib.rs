@@ -10,6 +10,8 @@ pub mod error_template;
 pub mod fileserv;
 pub mod mailboxes;
 #[cfg(feature = "ssr")]
+pub mod provision;
+#[cfg(feature = "ssr")]
 pub mod state;
 pub mod users;
 pub mod utils;

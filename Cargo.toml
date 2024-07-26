@@ -37,6 +37,7 @@ leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 leptos_toaster = { version = "0.1.3", features = ["builtin_toast"] }
 log = "0.4"
+owo-colors = "4.0.0"
 rand = { version = "0.8", features = ["min_const_gen"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.120"
@@ -44,6 +45,7 @@ server_fn = { version = "0.6", features = ["serde-lite"] }
 sqlx = { version = "0.7.2", features = [ "runtime-tokio-rustls", "sqlite", ], optional = true }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"], optional = true }
+toml = "0.8.16"
 tower = { version = "0.4", optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
 tracing = { version = "0.1", optional = true }
