@@ -6,6 +6,7 @@ use crate::auth::User;
 use crate::utils::{DeleteModal, EditModal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
 
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use leptos::leptos_dom::is_browser;
 use leptos::{ev::MouseEvent, logging::error, *};
@@ -45,9 +46,26 @@ pub struct AliasQuery {
     search: String,
 }
 
-pub(crate) fn validate_email(localpart: &str, domain: &str) -> Result<String, email_address::Error> {
+pub(crate) fn validate_address(localpart: &str, domain: &str, allow_reserved: bool) -> anyhow::Result<String> {
     let address = format!("{localpart}@{domain}");
-    email_address::EmailAddress::from_str(&address).map(|x| x.to_string())
+    if !allow_reserved
+        && matches!(
+            localpart,
+            "postmaster"
+                | "abuse"
+                | "admin"
+                | "root"
+                | "webmaster"
+                | "hostmaster"
+                | "support"
+                | "info"
+                | "security"
+                | "no-reply"
+        )
+    {
+        bail!("'{address}' is a reserved address");
+    }
+    Ok(email_address::EmailAddress::from_str(&address).map(|x| x.to_string())?)
 }
 
 #[cfg(feature = "ssr")]
@@ -164,6 +182,7 @@ pub async fn create_or_update_alias(
     active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
+    use crate::domains::allowed_domains;
     use crate::mailboxes::allowed_targets;
 
     let user = crate::auth::auth_any().await?;
@@ -197,7 +216,17 @@ pub async fn create_or_update_alias(
     let owner = if owner.is_empty() { &user.username } else { owner };
 
     // Check if address is valid
-    let address = validate_email(&alias, &domain)?;
+    let allowed_domains = allowed_domains().await?;
+    let Some(db_domain) = allowed_domains.iter().find(|x| x.0 == domain) else {
+        return Err(ServerFnError::new("domain must be set to a valid domain"));
+    };
+
+    let address = validate_address(
+        &alias,
+        &domain,
+        user.admin || db_domain.1 == user.username || user.mailbox_owner.is_some_and(|x| x == db_domain.1),
+    )
+    .map_err(ServerFnError::new)?;
 
     if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE aliases SET address = ");
@@ -311,7 +340,7 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
             use crate::domains::allowed_domains;
             match allowed_domains().await {
                 Err(e) => error!("Failed to load allowed domains: {}", e),
-                Ok(domains) => set_allowed_domains(domains),
+                Ok(domains) => set_allowed_domains(domains.into_iter().map(|x| x.0).collect()),
             }
         });
     };
@@ -461,8 +490,14 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
         }
     };
 
-    let has_invalid_email =
-        create_memo(move |_| validate_email(&edit_modal_input_alias(), &edit_modal_input_domain()).is_err());
+    let has_invalid_email = create_memo(move |_| {
+        validate_address(
+            &edit_modal_input_alias(),
+            &edit_modal_input_domain(),
+            true, /* error on create to save resource */
+        )
+        .is_err()
+    });
     let has_invalid_target = create_memo(move |_| {
         email_address::EmailAddress::from_str(&edit_modal_input_target()).is_err()
             || (!user.admin && edit_modal_input_target().is_empty())
@@ -470,7 +505,11 @@ pub fn Aliases(user: User, reload_stats: Callback<()>) -> impl IntoView {
 
     let errors = create_memo(move |_| {
         let mut errors = Vec::<String>::new();
-        if let Err(e) = validate_email(&edit_modal_input_alias(), &edit_modal_input_domain()) {
+        if let Err(e) = validate_address(
+            &edit_modal_input_alias(),
+            &edit_modal_input_domain(),
+            true, /* error on create to save resource */
+        ) {
             errors.push(format!("invalid alias address: {}", e));
         }
         if let Err(e) = email_address::EmailAddress::from_str(&edit_modal_input_target()) {

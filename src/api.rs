@@ -1,4 +1,4 @@
-use crate::{aliases::validate_email, auth::User, state::AppState};
+use crate::{aliases::validate_address, auth::User, state::AppState};
 use axum::{
     extract::{self, rejection::JsonRejection, State},
     response::IntoResponse,
@@ -95,6 +95,9 @@ async fn create_random_alias(
         return Err(ApiError::BadRequest("no usable domains are configured".to_string()));
     };
 
+    let alias = OsRng.gen::<Username>().to_string();
+
+    // Check if resulting address is valid
     if !allowed_domains.contains(&domain) {
         return Err(ApiError::BadRequest(format!(
             "Chosen domain '{}' does not exist or is not allowed to be used",
@@ -102,10 +105,8 @@ async fn create_random_alias(
         )));
     };
 
-    let alias = OsRng.gen::<Username>().to_string();
-
-    // Check if resulting address is valid
-    let address = validate_email(&alias, &domain).map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    let address = validate_address(&alias, &domain, false /* never allow reserved */)
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
 
     sqlx::query("INSERT INTO aliases (address, domain, target, comment, active, owner) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(&address)

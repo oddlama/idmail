@@ -93,11 +93,10 @@ and optionally configure your password manager to use one of the provided [API E
 
 ## ☁️ API Endpoints
 
-API endpoints are provided which allow you to generate random aliases ,
+API endpoints are provided which allow you to generate random aliases,
 compatible with those provided by [addy.io (AnonAddy)](https://addy.io/) or [SimpleLogin](https://simplelogin.io/).
 This means you can use it with a password manager to automatically create aliases for your logins.
-
-The aliases will be generated via the [`faker_rand` Username](https://docs.rs/faker_rand/latest/faker_rand/en_us/internet/struct.Username.html) generator,
+Aliases will be generated via the [`faker_rand` Username](https://docs.rs/faker_rand/latest/faker_rand/en_us/internet/struct.Username.html) generator,
 and may produce the following results:
 
 <details>
@@ -144,8 +143,13 @@ There are two different API endpoints available:
 - SimpleLogin compatible: Does not allow selecting a domain, so a random available domain is always selected
 
 Both endpoints always generate the same random usernames and ignore any format options in case the original API provides those.
+The required API token can be generated on the settings page when logging into the Web interface as a mailbox account.
+
+<details>
+<summary>
 
 #### addy.io compatible endpoint
+</summary>
 
 - Url: `https://idmail.example.com/api/v1/aliases`
 - Method: `POST`
@@ -198,8 +202,13 @@ Response:
 }
 ```
 </details>
+</details>
+
+<details>
+<summary>
 
 #### SimpleLogin compatible endpoint
+</summary>
 
 - Url: `https://idmail.example.com/api/alias/random/new`
 - Method: `POST`
@@ -212,7 +221,7 @@ Response:
 Request:
 
 ```
-> curl -X POST \
+curl -X POST \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -H "Authorization: {token}" \
@@ -227,6 +236,7 @@ Response:
     "alias": "zhoppe26@example.com"
 }
 ```
+</details>
 </details>
 
 ## ⚙️ Stalwart configuration
@@ -247,6 +257,4 @@ submitted for inclusion in this project by you, shall be licensed as above, with
 ## WIP
 
 - [ ] reserve special addresses on domain creation? postmaster@ admin@ no-reply@ ...
-- [ ] finalize dashboard stats
-- [ ] new random
 - [ ] if delete_alias takes long, and the user closes the dialog and opens another, then the result can close the new dialog.

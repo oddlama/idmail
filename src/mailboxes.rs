@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 
-use crate::aliases::validate_email;
+use crate::aliases::validate_address;
 use crate::users::is_valid_pw;
 use crate::utils::{DeleteModal, EditModal, Select};
 use crate::utils::{SliderRenderer, THeadCellRenderer, TailwindClassesPreset, TimediffRenderer};
@@ -134,6 +134,8 @@ pub async fn create_or_update_mailbox(
     owner: String,
 ) -> Result<(), ServerFnError> {
     use crate::users::mk_password_hash;
+    use crate::domains::allowed_domains;
+
     let user = crate::auth::auth_user().await?;
     let pool = crate::database::ssr::pool()?;
 
@@ -141,10 +143,15 @@ pub async fn create_or_update_mailbox(
     let owner = if user.admin { owner.trim() } else { &user.username };
     // Empty owner -> self owned
     let owner = if owner.is_empty() { &user.username } else { owner };
-    // TODO verify domain existence
 
     // Check if address is valid
-    let address = validate_email(&localpart, &domain)?;
+    let allowed_domains = allowed_domains().await?;
+    let Some(db_domain) = allowed_domains.iter().find(|x| x.0 == domain) else {
+        return Err(ServerFnError::new("domain must be set to a valid domain"));
+    };
+
+    let address = validate_address(&localpart, &domain, user.admin || db_domain.1 == user.username)
+        .map_err(ServerFnError::new)?;
 
     if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE mailboxes SET address = ");
@@ -261,7 +268,7 @@ pub fn Mailboxes(user: User, reload_stats: Callback<()>) -> impl IntoView {
             use crate::domains::allowed_domains;
             match allowed_domains().await {
                 Err(e) => error!("Failed to load allowed domains: {}", e),
-                Ok(domains) => set_allowed_domains(domains),
+                Ok(domains) => set_allowed_domains(domains.into_iter().map(|x| x.0).collect()),
             }
         });
     };
@@ -386,11 +393,21 @@ pub fn Mailboxes(user: User, reload_stats: Callback<()>) -> impl IntoView {
         let valid = is_valid_pw || (!is_new && edit_modal_input_password().is_empty());
         !valid
     });
-    let has_invalid_address =
-        create_memo(move |_| validate_email(&edit_modal_input_localpart(), &edit_modal_input_domain()).is_err());
+    let has_invalid_address = create_memo(move |_| {
+        validate_address(
+            &edit_modal_input_localpart(),
+            &edit_modal_input_domain(),
+            true, /* error on create to save resources */
+        )
+        .is_err()
+    });
     let errors = create_memo(move |_| {
         let mut errors = Vec::new();
-        if let Err(e) = validate_email(&edit_modal_input_localpart(), &edit_modal_input_domain()) {
+        if let Err(e) = validate_address(
+            &edit_modal_input_localpart(),
+            &edit_modal_input_domain(),
+            true, /* error on create to save resources */
+        ) {
             errors.push(format!("invalid address: {}", e));
         }
         if has_password_mismatch() {

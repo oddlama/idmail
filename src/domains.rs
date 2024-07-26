@@ -40,10 +40,10 @@ pub struct DomainQuery {
 }
 
 #[server]
-pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
+pub async fn allowed_domains() -> Result<Vec<(String, String)>, ServerFnError> {
     let user = crate::auth::auth_any().await?;
 
-    let mut query = QueryBuilder::new("SELECT domain FROM domains");
+    let mut query = QueryBuilder::new("SELECT domain, owner FROM domains");
     query.push(" WHERE active = TRUE AND (public = TRUE OR owner = ");
     query.push_bind(&user.username);
     if let Some(mailbox_owner) = user.mailbox_owner {
@@ -53,7 +53,7 @@ pub async fn allowed_domains() -> Result<Vec<String>, ServerFnError> {
     query.push(")");
 
     let pool = crate::database::ssr::pool()?;
-    Ok(query.build_query_scalar::<String>().fetch_all(&pool).await?)
+    Ok(query.build_query_as::<(String, String)>().fetch_all(&pool).await?)
 }
 
 #[server]
