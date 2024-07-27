@@ -153,9 +153,9 @@ pub async fn create_or_update_mailbox(
     let address = validate_address(&localpart, &domain, user.admin || *domain_owner == user.username)
         .map_err(ServerFnError::new)?;
 
-    if let Some(old_address) = old_address {
+    let mut query = if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE mailboxes SET address = ");
-        query.push_bind(address);
+        query.push_bind(&address);
         query.push(", domain = ");
         query.push_bind(domain);
         if !password.is_empty() {
@@ -173,19 +173,35 @@ pub async fn create_or_update_mailbox(
             query.push(" AND owner = ");
             query.push_bind(&user.username);
         }
+        // make sure that no alias exists with that address
+        query.push(" AND NOT EXISTS (SELECT * FROM aliases WHERE address = ");
+        query.push_bind(&address);
+        query.push(")");
 
-        query.build().execute(&pool).await.map(|_| ())?;
+        query
     } else {
         let password_hash = mk_password_hash(&password)?;
-        sqlx::query("INSERT INTO mailboxes (address, domain, password_hash, active, owner) VALUES (?, ?, ?, ?, ?)")
-            .bind(address)
-            .bind(domain)
-            .bind(password_hash)
-            .bind(active)
-            .bind(owner)
-            .execute(&pool)
-            .await
-            .map(|_| ())?;
+        let mut query = QueryBuilder::new("INSERT INTO mailboxes (address, domain, password_hash, active, owner)");
+        query.push("SELECT ");
+        query.push_bind(&address);
+        query.push(", ");
+        query.push_bind(domain);
+        query.push(", ");
+        query.push_bind(password_hash);
+        query.push(", ");
+        query.push_bind(active);
+        query.push(", ");
+        query.push_bind(owner);
+        // make sure that no alias exists with that address
+        query.push(" WHERE NOT EXISTS (SELECT * FROM aliases WHERE address = ");
+        query.push_bind(&address);
+        query.push(")");
+
+        query
+    };
+
+    if query.build().execute(&pool).await?.rows_affected() == 0 {
+        return Err(ServerFnError::new("This address is already in use by an alias!"));
     }
 
     Ok(())

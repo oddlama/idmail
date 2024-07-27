@@ -231,9 +231,9 @@ pub async fn create_or_update_alias(
     )
     .map_err(ServerFnError::new)?;
 
-    if let Some(old_address) = old_address {
+    let mut query = if let Some(old_address) = old_address {
         let mut query = QueryBuilder::new("UPDATE aliases SET address = ");
-        query.push_bind(address);
+        query.push_bind(&address);
         query.push(", domain = ");
         query.push_bind(domain);
         query.push(", target = ");
@@ -249,19 +249,36 @@ pub async fn create_or_update_alias(
         if !user.admin {
             push_and_check_aliases_owner(&mut query, user.username.clone());
         }
+        // make sure that no mailbox exists with that address
+        query.push(" AND NOT EXISTS (SELECT * FROM mailboxes WHERE address = ");
+        query.push_bind(&address);
+        query.push(")");
 
-        query.build().execute(&pool).await.map(|_| ())?;
+        query
     } else {
-        sqlx::query("INSERT INTO aliases (address, domain, target, comment, active, owner) VALUES (?, ?, ?, ?, ?, ?)")
-            .bind(address)
-            .bind(domain)
-            .bind(target)
-            .bind(comment)
-            .bind(active)
-            .bind(owner)
-            .execute(&pool)
-            .await
-            .map(|_| ())?;
+        let mut query = QueryBuilder::new("INSERT INTO aliases (address, domain, target, comment, active, owner)");
+        query.push("SELECT ");
+        query.push_bind(&address);
+        query.push(", ");
+        query.push_bind(domain);
+        query.push(", ");
+        query.push_bind(target);
+        query.push(", ");
+        query.push_bind(comment);
+        query.push(", ");
+        query.push_bind(active);
+        query.push(", ");
+        query.push_bind(owner);
+        // make sure that no mailbox exists with that address
+        query.push(" WHERE NOT EXISTS (SELECT * FROM mailboxes WHERE address = ");
+        query.push_bind(&address);
+        query.push(")");
+
+        query
+    };
+
+    if query.build().execute(&pool).await?.rows_affected() == 0 {
+        return Err(ServerFnError::new("This address is already in use by a mailbox!"));
     }
 
     Ok(())

@@ -156,7 +156,6 @@ pub async fn create_or_update_domain(
 
     if let Some(old_domain) = old_domain {
         let mut query = QueryBuilder::new("UPDATE domains SET catch_all = ");
-        query.push(", catch_all = ");
         query.push_bind(catch_all);
         if user.admin {
             // Only admins can edit the domain itself

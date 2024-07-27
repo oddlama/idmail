@@ -108,19 +108,39 @@ async fn create_random_alias(
     let address = validate_address(&alias, &domain, false /* never allow reserved */)
         .map_err(|e| ApiError::BadRequest(e.to_string()))?;
 
-    sqlx::query("INSERT INTO aliases (address, domain, target, comment, active, owner) VALUES (?, ?, ?, ?, ?, ?)")
-        .bind(&address)
-        .bind(&domain)
-        .bind(target)
-        .bind(comment)
-        .bind(true)
-        .bind(owner)
+    let mut query = QueryBuilder::new("INSERT INTO aliases (address, domain, target, comment, active, owner)");
+    query.push("SELECT ");
+    query.push_bind(&address);
+    query.push(", ");
+    query.push_bind(&domain);
+    query.push(", ");
+    query.push_bind(target);
+    query.push(", ");
+    query.push_bind(comment);
+    query.push(", ");
+    query.push_bind(true);
+    query.push(", ");
+    query.push_bind(owner);
+    // make sure that no mailbox exists with that address
+    query.push(" WHERE NOT EXISTS (SELECT * FROM mailboxes WHERE address = ");
+    query.push_bind(&address);
+    query.push(")");
+
+    if query
+        .build()
         .execute(&app_state.pool)
         .await
         .map_err(|e| {
             log::error!("database error while creating alias via api token: {e}");
             ApiError::ServerError("database error".to_string())
-        })?;
+        })?
+        .rows_affected()
+        == 0
+    {
+        return Err(ApiError::ServerError(
+            "This address is already in use by a mailbox!".to_string(),
+        ));
+    }
 
     Ok((address, alias, domain))
 }
