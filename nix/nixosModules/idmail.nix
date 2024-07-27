@@ -48,6 +48,7 @@ in {
       enable = mkEnableOption "provisioning of idmail";
 
       users = mkOption {
+        default = {};
         type = types.attrsOf (types.submodule {
           options = {
             password_hash = mkOption {
@@ -73,6 +74,7 @@ in {
       };
 
       domains = mkOption {
+        default = {};
         type = types.attrsOf (types.submodule {
           options = {
             owner = mkOption {
@@ -107,6 +109,7 @@ in {
       };
 
       mailboxes = mkOption {
+        default = {};
         type = types.attrsOf (types.submodule {
           options = {
             password_hash = mkOption {
@@ -141,6 +144,7 @@ in {
       };
 
       aliases = mkOption {
+        default = {};
         type = types.attrsOf (types.submodule {
           options = {
             target = mkOption {
