@@ -17,7 +17,7 @@
     ;
 
   cfg = config.services.idmail;
-  dataDir = "/var/lib/idmail";
+  defaultDataDir = "/var/lib/idmail";
 
   provisionWithoutNull = filterAttrsRecursive (_: v: v != null) (removeAttrs cfg.provision ["enable"]);
   provisionToml = (pkgs.formats.toml {}).generate "idmail-provision.toml" provisionWithoutNull;
@@ -25,6 +25,18 @@ in {
   options.services.idmail = {
     enable = mkEnableOption "idmail";
     package = mkPackageOption pkgs "idmail" {};
+
+    user = mkOption {
+      default = "idmail";
+      type = types.str;
+      description = "The user as which the service will be executed. Only creates a user 'idmail' if left untouched.";
+    };
+
+    dataDir = mkOption {
+      default = defaultDataDir;
+      type = types.path;
+      description = "The data directory where the database will be stored";
+    };
 
     openFirewall = mkOption {
       type = types.bool;
@@ -179,11 +191,13 @@ in {
   };
 
   config = mkIf cfg.enable {
-    users.groups.idmail = {};
-    users.users.idmail = {
-      isSystemUser = true;
-      group = "idmail";
-      home = dataDir;
+    users = mkIf (cfg.user == "idmail") {
+      groups.idmail = {};
+      users.users.idmail = {
+        isSystemUser = true;
+        group = "idmail";
+        home = defaultDataDir;
+      };
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [cfg.port];
@@ -198,12 +212,12 @@ in {
       serviceConfig = {
         Restart = "on-failure";
         ExecStart = getExe cfg.package;
-        User = "idmail";
-        Group = "idmail";
+        User = cfg.user;
 
-        WorkingDirectory = dataDir;
-        StateDirectory = "idmail";
-        StateDirectoryMode = "0750";
+        StateDirectory = mkIf (cfg.dataDir == defaultDataDir) "idmail";
+        StateDirectoryMode = mkIf (cfg.dataDir == defaultDataDir) "0750";
+        WorkingDirectory = cfg.dataDir;
+        ReadWriteDirectories = [cfg.dataDir];
 
         # Hardening
         CapabilityBoundingSet = "";
@@ -237,7 +251,7 @@ in {
           "@system-service"
           "~@privileged"
         ];
-        UMask = "0007";
+        UMask = "0027";
       };
     };
   };
