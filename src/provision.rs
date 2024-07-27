@@ -71,7 +71,7 @@ mod state {
 
 fn value_or_file(value: String) -> Result<String> {
     if let Some(file) = value.strip_prefix("%{file:").and_then(|x| x.strip_suffix("}%")) {
-        Ok(std::fs::read_to_string(file)?)
+        Ok(std::fs::read_to_string(file)?.trim().to_string())
     } else {
         Ok(value)
     }
