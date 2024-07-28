@@ -55,7 +55,10 @@ async fn leptos_routes_handler(
 }
 
 async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sqlx::Sqlite>> {
-    let options = SqliteConnectOptions::new().filename(filename).create_if_missing(true);
+    let options = SqliteConnectOptions::new()
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .filename(filename)
+        .create_if_missing(true);
     Ok(SqlitePool::connect_with(options).await?)
 }
 
