@@ -172,6 +172,7 @@ vkirlin50@example.com
 bobernier@example.com
 jazminbeatty@example.com
 ```
+
 </details>
 
 There are two different API endpoints available:
@@ -186,6 +187,7 @@ The required API token can be generated on the settings page when logging into t
 <summary>
 
 #### addy.io compatible endpoint
+
 </summary>
 
 - Url: `https://idmail.example.com/api/v1/aliases`
@@ -238,6 +240,7 @@ Response:
     }
 }
 ```
+
 </details>
 </details>
 
@@ -245,6 +248,7 @@ Response:
 <summary>
 
 #### SimpleLogin compatible endpoint
+
 </summary>
 
 - Url: `https://idmail.example.com/api/alias/random/new`
@@ -273,6 +277,7 @@ Response:
     "alias": "zhoppe26@example.com"
 }
 ```
+
 </details>
 </details>
 
@@ -300,12 +305,133 @@ webmaster
 
 ## ⚙️ Stalwart configuration
 
-To integrate the idmail sqlite database with your stalwart server, you need to make
-the stalwart server be able to access the database file and add the following
-directory configuration:
+To integrate the idmail sqlite database with your stalwart server, you will need to provide
+the necessary SQL queries to stalwart. This is done by configuring and external directory
+in stalwart. This requires some complex queries to honor the `active` flag correctly and
+output everything in the format stalwart expects.
+
+You have to make sure that stalwart has read-write access to the `idmail.db` database file and the related files for sqlite WAL mode.
+Here's the configuration that you will need (don't forget to adjust the path to the `idmail.db` database):
+
+<details>
+<summary>Example stalwart configuration</summary>
 
 ```toml
+[storage]
+directory = "idmail"
+
+[directory.idmail]
+type = "sql"
+store = "idmail"
+
+[directory.idmail.columns]
+name = "name"
+description = "description"
+secret = "secret"
+email = "email"
+#quota = "quota" quotas are currently not implemented in idmail
+class = "type"
+
+[store.idmail]
+# TODO: adjust the path below!
+path = "/path/to/idmail.db"
+type = "sqlite"
+
+[store.idmail.query]
+domains = """\
+SELECT domain FROM domains \
+    WHERE domain = ?1 \
+"""
+emails = """\
+SELECT address FROM ( \
+    SELECT m.address AS address, 1 AS rowOrder \
+        FROM mailboxes AS m \
+        JOIN domains AS d ON m.domain = d.domain \
+        JOIN users AS u ON m.owner = u.username \
+        WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
+    UNION SELECT a.address AS address, 2 AS rowOrder \
+        FROM aliases AS a \
+        JOIN domains AS d ON a.domain = d.domain \
+        JOIN ( \
+            SELECT username FROM users \
+            WHERE active = true \
+            UNION SELECT m.address AS username FROM mailboxes AS m \
+            JOIN users AS u ON m.owner = u.username \
+            WHERE m.active = true AND u.active = true \
+        ) AS u ON a.owner = u.username \
+        WHERE a.target = ?1 AND a.active = true AND d.active = true \
+    UNION SELECT ('@' || d.domain) AS address, 2 AS rowOrder FROM domains AS d \
+        JOIN mailboxes AS m ON d.catch_all = m.address \
+        JOIN users AS u ON m.owner = u.username \
+        WHERE d.catch_all = ?1 AND d.active = true AND m.active = true AND u.active = true \
+    ORDER BY rowOrder, address ASC \
+) \
+"""
+expand = """\
+SELECT m.address AS address FROM mailboxes AS m \
+    JOIN domains AS d ON m.domain = d.domain \
+    JOIN users AS u ON m.owner = u.username \
+    WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
+UNION SELECT a.address AS address FROM aliases AS a \
+    JOIN domains AS d ON a.domain = d.domain \
+    JOIN ( \
+        SELECT username FROM users \
+            WHERE active = true \
+        UNION SELECT m.address AS username FROM mailboxes AS m \
+            JOIN users AS u ON m.owner = u.username \
+            WHERE m.active = true AND u.active = true \
+    ) AS u ON a.owner = u.username \
+    WHERE a.address = ?1 AND a.active = true AND d.active = true \
+ORDER BY address \
+LIMIT 50 \
+"""
+members = ""
+name = """\
+SELECT m.address AS name, 'individual' AS type, m.password_hash AS secret, m.address AS description, 0 AS quota FROM mailboxes AS m \
+    JOIN domains AS d ON m.domain = d.domain \
+    JOIN users AS u ON m.owner = u.username \
+    WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
+"""
+recipients = """\
+SELECT m.address AS name FROM mailboxes AS m \
+    JOIN domains AS d ON m.domain = d.domain \
+    JOIN users AS u ON m.owner = u.username \
+    WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
+UNION SELECT a.target AS name FROM aliases AS a \
+    JOIN domains AS d ON a.domain = d.domain \
+    JOIN ( \
+        SELECT username FROM users \
+            WHERE active = true \
+        UNION SELECT m.address AS username FROM mailboxes AS m \
+            JOIN users AS u ON m.owner = u.username \
+            WHERE m.active = true AND u.active = true \
+    ) AS u ON a.owner = u.username \
+    WHERE a.address = ?1 AND a.active = true AND d.active = true \
+UNION SELECT d.catch_all AS name FROM domains AS d \
+    JOIN mailboxes AS m ON d.catch_all = m.address \
+    JOIN users AS u ON m.owner = u.username \
+    WHERE ?1 = ('@' || d.domain) AND d.active = true AND m.active = true AND u.active = true \
+"""
+verify = """\
+SELECT m.address AS address FROM mailboxes AS m \
+    JOIN domains AS d ON m.domain = d.domain \
+    JOIN users AS u ON m.owner = u.username \
+    WHERE m.address LIKE '%' || ?1 || '%' AND m.active = true AND d.active = true AND u.active = true \
+UNION SELECT a.address AS address FROM aliases AS a \
+    JOIN domains AS d ON a.domain = d.domain \
+    JOIN ( \
+        SELECT username FROM users \
+            WHERE active = true \
+        UNION SELECT m.address AS username FROM mailboxes AS m \
+            JOIN users AS u ON m.owner = u.username \
+            WHERE m.active = true AND u.active = true \
+    ) AS u ON a.owner = u.username \
+    WHERE a.address LIKE '%' || ?1 || '%' AND a.active = true AND d.active = true \
+ORDER BY address \
+LIMIT 5 \
+"""
 ```
+</details>
 
 ## 🌟 Provisioning
 
