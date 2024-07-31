@@ -60,31 +60,6 @@ async fn leptos_routes_handler(
 }
 
 async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sqlx::Sqlite>> {
-    // Create db files with correct permissions
-    OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .mode(0o660)
-        .open("idmail.db")?;
-    OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .mode(0o660)
-        .open("idmail.db-shm")?;
-    OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .mode(0o660)
-        .open("idmail.db-wal")?;
-
-    // Change permissions in case some dumb sqlite implementation of a mailserver created them wrongly
-    let _ = std::fs::set_permissions("idmail.db", std::fs::Permissions::from_mode(0o660));
-    let _ = std::fs::set_permissions("idmail.db-shm", std::fs::Permissions::from_mode(0o660));
-    let _ = std::fs::set_permissions("idmail.db-wal", std::fs::Permissions::from_mode(0o660));
-
     let options = SqliteConnectOptions::new()
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .filename(filename)

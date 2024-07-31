@@ -209,13 +209,14 @@ in {
 
       environment.LEPTOS_SITE_ADDR = "${cfg.host}:${toString cfg.port}";
       environment.IDMAIL_PROVISION = mkIf cfg.provision.enable provisionToml;
+
       serviceConfig = {
         Restart = "on-failure";
         ExecStart = getExe cfg.package;
         User = cfg.user;
 
         StateDirectory = mkIf (cfg.dataDir == defaultDataDir) "idmail";
-        StateDirectoryMode = mkIf (cfg.dataDir == defaultDataDir) "4770";
+        StateDirectoryMode = mkIf (cfg.dataDir == defaultDataDir) "750";
         WorkingDirectory = cfg.dataDir;
         ReadWriteDirectories = [cfg.dataDir];
 
@@ -251,7 +252,7 @@ in {
           "@system-service"
           "~@privileged"
         ];
-        UMask = "0007";
+        UMask = "0027";
       };
     };
   };
