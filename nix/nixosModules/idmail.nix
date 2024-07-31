@@ -193,7 +193,7 @@ in {
   config = mkIf cfg.enable {
     users = mkIf (cfg.user == "idmail") {
       groups.idmail = {};
-      users.users.idmail = {
+      users.idmail = {
         isSystemUser = true;
         group = "idmail";
         home = defaultDataDir;
@@ -215,7 +215,7 @@ in {
         User = cfg.user;
 
         StateDirectory = mkIf (cfg.dataDir == defaultDataDir) "idmail";
-        StateDirectoryMode = mkIf (cfg.dataDir == defaultDataDir) "0750";
+        StateDirectoryMode = mkIf (cfg.dataDir == defaultDataDir) "4770";
         WorkingDirectory = cfg.dataDir;
         ReadWriteDirectories = [cfg.dataDir];
 
