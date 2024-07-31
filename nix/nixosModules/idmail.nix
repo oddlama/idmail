@@ -251,7 +251,7 @@ in {
           "@system-service"
           "~@privileged"
         ];
-        UMask = "0027";
+        UMask = "0007";
       };
     };
   };
