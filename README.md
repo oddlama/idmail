@@ -5,9 +5,8 @@
     <img src="https://github.com/user-attachments/assets/58e01aab-2eb0-4dd4-bf44-4d53296731a4" height="250" />
 </p>
 
-> [!CAUTION]
-> THIS PROJECT IS ALMOST FINISHED, BUT NOT YET READY FOR USE!
-> We are in the final testing phase.
+> [!IMPORTANT]
+> Sent and recv counts require MTA-specific hook setups that are currently not documented!
 
 ## 📧 idmail
 
@@ -329,7 +328,8 @@ name = "name"
 description = "description"
 secret = "secret"
 email = "email"
-#quota = "quota" quotas are currently not implemented in idmail
+# quotas are currently not implemented in idmail
+#quota = "quota"
 class = "type"
 
 [store.idmail]
@@ -392,25 +392,33 @@ SELECT m.address AS name, 'individual' AS type, m.password_hash AS secret, m.add
     JOIN users AS u ON m.owner = u.username \
     WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
 """
+# the ordering allows aliases to override existing mailboxes.
+# The web interface never allows you to create such an alias,
+# but by provisioning you can create send-only mailboxes that
+# have their incoming mail redirected somewhere else
 recipients = """\
-SELECT m.address AS name FROM mailboxes AS m \
-    JOIN domains AS d ON m.domain = d.domain \
-    JOIN users AS u ON m.owner = u.username \
-    WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
-UNION SELECT a.target AS name FROM aliases AS a \
-    JOIN domains AS d ON a.domain = d.domain \
-    JOIN ( \
-        SELECT username FROM users \
-            WHERE active = true \
-        UNION SELECT m.address AS username FROM mailboxes AS m \
-            JOIN users AS u ON m.owner = u.username \
-            WHERE m.active = true AND u.active = true \
-    ) AS u ON a.owner = u.username \
-    WHERE a.address = ?1 AND a.active = true AND d.active = true \
-UNION SELECT d.catch_all AS name FROM domains AS d \
-    JOIN mailboxes AS m ON d.catch_all = m.address \
-    JOIN users AS u ON m.owner = u.username \
-    WHERE ?1 = ('@' || d.domain) AND d.active = true AND m.active = true AND u.active = true \
+SELECT name FROM ( \
+    SELECT a.target AS name, 1 AS rowOrder AS name FROM aliases AS a \
+        JOIN domains AS d ON a.domain = d.domain \
+        JOIN ( \
+            SELECT username FROM users \
+                WHERE active = true \
+            UNION SELECT m.address AS username FROM mailboxes AS m \
+                JOIN users AS u ON m.owner = u.username \
+                WHERE m.active = true AND u.active = true \
+        ) AS u ON a.owner = u.username \
+        WHERE a.address = ?1 AND a.active = true AND d.active = true \
+    UNION SELECT m.address AS name, 2 AS rowOrder AS name FROM mailboxes AS m \
+        JOIN domains AS d ON m.domain = d.domain \
+        JOIN users AS u ON m.owner = u.username \
+        WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
+    UNION SELECT d.catch_all AS name, 3 AS rowOrder AS name FROM domains AS d \
+        JOIN mailboxes AS m ON d.catch_all = m.address \
+        JOIN users AS u ON m.owner = u.username \
+        WHERE ?1 = ('@' || d.domain) AND d.active = true AND m.active = true AND u.active = true \
+    ORDER BY rowOrder, name ASC \
+    LIMIT 1 \
+) \
 """
 verify = """\
 SELECT m.address AS address FROM mailboxes AS m \
