@@ -441,6 +441,8 @@ LIMIT 5 \
 ```
 </details>
 
+For a working in-the-field configuration, have a look at my own repository and specifically [this](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/stalwart-mail.nix) and [this](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/idmail.nix) file.
+
 ## 🌟 Provisioning
 
 To support declarative deployment you can provision users, domains, mailboxes and aliases out of the box.
