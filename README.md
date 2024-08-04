@@ -44,9 +44,30 @@ on how to build and deploy this application.
 #### ❄️ NixOS
 
 Installation under NixOS is straightforward. This repository provides an overlay and NixOS module for
-simple deployment.
+simple deployment. First, add this repository flake input and import the module on your NixOS system(s):
 
-Afterwards, simply enable the service:
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    idmail.url = "github:oddlama/idmail";
+    idmail.inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = { self, nixpkgs, idmail }: {
+    # Add the module to your system(s)
+    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        idmail.nixosModules.default
+      ];
+    };
+  };
+}
+```
+
+Afterwards, simply enable the service in your configuration and proxy the web interface:
 
 ```nix
 {
@@ -97,6 +118,10 @@ or view the module source for more information.
   };
 }
 ```
+
+For a working in-the-field configuration, feel free to have a look at my personal repository.
+Specifically [stalwart-mail.nix](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/stalwart-mail.nix)
+and [idmail.nix](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/idmail.nix).
 
 ## 🧰 Building
 
@@ -440,8 +465,6 @@ LIMIT 5 \
 """
 ```
 </details>
-
-For a working in-the-field configuration, have a look at my own repository and specifically [this](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/stalwart-mail.nix) and [this](https://github.com/oddlama/nix-config/blob/main/hosts/envoy/idmail.nix) file.
 
 ## 🌟 Provisioning
 
