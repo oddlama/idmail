@@ -307,7 +307,7 @@ Response:
 
 ## ⛔ Reserved addresses
 
-For security purposes, we always reserved a list of special mailbox/alias names which only the domain owner (or admin) may create.
+For security purposes, we always reserve a list of special mailbox/alias names which only the domain owner (or admin) may create.
 The list currently contains:
 
 ```
