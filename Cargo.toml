@@ -31,10 +31,10 @@ futures = "0.3"
 getrandom = "0.2.14"
 hex = "0.4.3"
 http = "1.0"
-icondata = "0.3.0"
+icondata = "0.4.0"
 leptos = { version = "0.6", features = ["nightly"] }
-leptos-struct-table = "0.10.2"
-leptos-use = "0.10"
+leptos-struct-table = "0.13.0"
+leptos-use = "0.13.4"
 leptos_axum = { version = "0.6", optional = true }
 leptos_icons = "0.3.0"
 leptos_meta = { version = "0.6", features = ["nightly"] }

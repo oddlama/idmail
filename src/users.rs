@@ -736,9 +736,8 @@ pub fn AccountSettings(user: crate::auth::User) -> impl IntoView {
                             class="absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-900 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg py-2 px-2.5 inline-flex items-center justify-center bg-white dark:bg-black border-gray-200 border"
                             on:click=move |_ev| {
                                 (api_token_modal_copied_timer.start)(());
-                                if let Some(clipboard) = window().navigator().clipboard() {
-                                    let _ = clipboard.write_text(&api_token_modal_token.get());
-                                }
+                                let clipboard = window().navigator().clipboard();
+                                let _ = clipboard.write_text(&api_token_modal_token.get());
                             }
                         >
 
