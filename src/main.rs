@@ -59,7 +59,7 @@ async fn connect(filename: impl AsRef<std::path::Path>) -> Result<sqlx::Pool<sql
     let options = SqliteConnectOptions::new()
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .filename(filename)
-        .create_if_missing(false);
+        .create_if_missing(true);
     Ok(SqlitePool::connect_with(options).await?)
 }
 
