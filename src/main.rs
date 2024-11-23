@@ -8,7 +8,8 @@ use axum::{
     Router,
 };
 use axum_session::{SessionConfig, SessionLayer, SessionStore};
-use axum_session_auth::{AuthConfig, AuthSessionLayer, SessionSqlitePool};
+use axum_session_auth::{AuthConfig, AuthSessionLayer};
+use axum_session_sqlx::SessionSqlitePool;
 use idmail::{
     app::App,
     auth::{ssr::AuthSession, User},

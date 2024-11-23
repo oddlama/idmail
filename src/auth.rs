@@ -25,7 +25,8 @@ pub struct User {
 pub mod ssr {
     pub use super::User;
     use anyhow::{anyhow, Context};
-    pub use axum_session_auth::{Authentication, HasPermission, SessionSqlitePool};
+    pub use axum_session_auth::{Authentication, HasPermission};
+    pub use axum_session_sqlx::SessionSqlitePool;
     pub use sqlx::SqlitePool;
     pub use std::collections::HashSet;
     pub type AuthSession = axum_session_auth::AuthSession<User, String, SessionSqlitePool, SqlitePool>;

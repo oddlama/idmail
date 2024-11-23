@@ -14,44 +14,45 @@ license = "MIT"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = "1.0.93"
 argon2 = {version = "0.5.3", optional = true}
 async-trait = { version = "0.1", optional = true }
 axum = { version = "0.7", optional = true, features = ["macros"] }
-axum-extra = "0.9.3"
-axum_session = { version = "0.12.4", features = [ "sqlite-rustls", ], optional = true }
-axum_session_auth = { version = "0.12.1", features = [ "sqlite-rustls", ], optional = true }
+axum-extra = "0.9.6"
+axum_session = { version = "0.14.4", optional = true }
+axum_session_auth = { version = "0.14.1", optional = true }
+axum_session_sqlx = { version = "0.3.0", features = ["sqlite"], optional = true }
 chrono = { version = "0.4.38", features = ["serde"] }
 chrono-humanize = { version = "0.2.3", features = ["wasmbind"] }
 console_error_panic_hook = "0.1"
 console_log = "1.0"
-email_address = "0.2.4"
+email_address = "0.2.9"
 faker_rand = "0.1.1"
 futures = "0.3"
-getrandom = "0.2.14"
+getrandom = "0.2.15"
 hex = "0.4.3"
-http = "1.0"
-icondata = "0.4.0"
+http = "1.1"
+icondata = "0.5.0"
 leptos = { version = "0.6", features = ["nightly"] }
-leptos-struct-table = "0.13.0"
-leptos-use = "0.13.4"
+leptos-struct-table = "0.13.1"
+leptos-use = "0.13.11"
 leptos_axum = { version = "0.6", optional = true }
-leptos_icons = "0.3.0"
+leptos_icons = "0.3.1"
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
-leptos_toaster = { version = "0.1.3", features = ["builtin_toast"] }
+leptos_toaster = { version = "0.1.7", features = ["builtin_toast"] }
 log = "0.4"
-owo-colors = "4.0.0"
+owo-colors = "4.1.0"
 rand = { version = "0.8", features = ["min_const_gen"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.120"
+serde_json = "1.0.133"
 server_fn = { version = "0.6", features = ["serde-lite"] }
-sqlx = { version = "0.7.2", features = [ "runtime-tokio-rustls", "sqlite", ], optional = true }
-thiserror = "1.0"
+sqlx = { version = "0.8.2", features = [ "runtime-tokio-rustls", "sqlite", ], optional = true }
+thiserror = "2.0.3"
 tokio = { version = "1", features = ["full"], optional = true }
-toml = "0.8.16"
-tower = { version = "0.4", features = ["util"], optional = true }
-tower-http = { version = "0.5", features = ["fs"], optional = true }
+toml = "0.8.19"
+tower = { version = "0.5.1", features = ["util"], optional = true }
+tower-http = { version = "0.6.2", features = ["fs"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = "0.3.18"
 wasm-bindgen = "0.2"
@@ -69,6 +70,7 @@ ssr = [
 	"dep:tower-http",
 	"dep:tokio",
 	"dep:axum_session_auth",
+	"dep:axum_session_sqlx",
 	"dep:axum_session",
 	"dep:async-trait",
 	"dep:sqlx",
