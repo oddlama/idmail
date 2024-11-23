@@ -50,7 +50,7 @@ sqlx = { version = "0.7.2", features = [ "runtime-tokio-rustls", "sqlite", ], op
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"], optional = true }
 toml = "0.8.16"
-tower = { version = "0.4", optional = true }
+tower = { version = "0.4", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = "0.3.18"
