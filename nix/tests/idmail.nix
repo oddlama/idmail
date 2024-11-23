@@ -1,15 +1,17 @@
 let
   token = "averyveryverysecuretokenwithmanycharacters";
 in
-  (import ./lib.nix) {
-    name = "idmail-nixos";
-    nodes.machine = {
+(import ./lib.nix) {
+  name = "idmail-nixos";
+  nodes.machine =
+    {
       self,
       pkgs,
       ...
-    }: {
-      imports = [self.nixosModules.default];
-      environment.systemPackages = [pkgs.jq];
+    }:
+    {
+      imports = [ self.nixosModules.default ];
+      environment.systemPackages = [ pkgs.jq ];
       services.idmail = {
         enable = true;
         provision = {
@@ -37,43 +39,43 @@ in
       };
     };
 
-    testScript = ''
-      start_all()
+  testScript = ''
+    start_all()
 
-      def expect_output(output, expected):
-        assert output == expected, f"""
-          Expected output: {repr(expected)}
-          Actual output: {repr(output)}
-        """
+    def expect_output(output, expected):
+      assert output == expected, f"""
+        Expected output: {repr(expected)}
+        Actual output: {repr(output)}
+      """
 
-      machine.wait_for_unit("idmail.service")
-      machine.wait_for_open_port(3000)
-      machine.succeed("curl --fail http://localhost:3000/")
+    machine.wait_for_unit("idmail.service")
+    machine.wait_for_open_port(3000)
+    machine.succeed("curl --fail http://localhost:3000/")
 
-      # Test addy.io endpoint
-      cmd = [
-        "curl --fail -X POST",
-        "-H \"Content-Type: application/json\"",
-        "-H \"Accept: application/json\"",
-        "-H \"Authorization: Bearer ${token}\"",
-        "--data '{\"domain\":\"example.com\",\"description\":\"An optional comment added to the entry\"}'",
-        "localhost:3000/api/v1/aliases",
-        "| jq '.data | has(\"email\")'",
-      ]
-      out = machine.succeed(' '.join(cmd))
-      expect_output(out, "true\n")
+    # Test addy.io endpoint
+    cmd = [
+      "curl --fail -X POST",
+      "-H \"Content-Type: application/json\"",
+      "-H \"Accept: application/json\"",
+      "-H \"Authorization: Bearer ${token}\"",
+      "--data '{\"domain\":\"example.com\",\"description\":\"An optional comment added to the entry\"}'",
+      "localhost:3000/api/v1/aliases",
+      "| jq '.data | has(\"email\")'",
+    ]
+    out = machine.succeed(' '.join(cmd))
+    expect_output(out, "true\n")
 
-      # Test SimpleLogin endpoint
-      cmd = [
-        "curl --fail -X POST",
-        "-H \"Content-Type: application/json\"",
-        "-H \"Accept: application/json\"",
-        "-H \"Authorization: ${token}\"",
-        "--data '{\"note\":\"A comment added to the entry\"}'",
-        "localhost:3000/api/alias/random/new",
-        "| jq 'has(\"alias\")'",
-      ]
-      out = machine.succeed(' '.join(cmd))
-      expect_output(out, "true\n")
-    '';
-  }
+    # Test SimpleLogin endpoint
+    cmd = [
+      "curl --fail -X POST",
+      "-H \"Content-Type: application/json\"",
+      "-H \"Accept: application/json\"",
+      "-H \"Authorization: ${token}\"",
+      "--data '{\"note\":\"A comment added to the entry\"}'",
+      "localhost:3000/api/alias/random/new",
+      "| jq 'has(\"alias\")'",
+    ]
+    out = machine.succeed(' '.join(cmd))
+    expect_output(out, "true\n")
+  '';
+}

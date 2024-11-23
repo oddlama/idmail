@@ -133,8 +133,8 @@ pub async fn create_or_update_mailbox(
     active: bool,
     owner: String,
 ) -> Result<(), ServerFnError> {
-    use crate::users::mk_password_hash;
     use crate::domains::allowed_domains;
+    use crate::users::mk_password_hash;
 
     let user = crate::auth::auth_user().await?;
     let pool = crate::database::ssr::pool()?;
