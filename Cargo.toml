@@ -1,7 +1,7 @@
 [package]
 name = "idmail"
 edition = "2021"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["oddlama <oddlama@oddlama.org>"]
 description = "An email alias and account management interface for self-hosted mailservers"
 homepage = "https://github.com/oddlama/idmail"
