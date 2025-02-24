@@ -229,7 +229,7 @@ curl -X POST \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -H "Authorization: Bearer {token}" \
-    --data '{"domain":"example.com","description":"An optional comment added to the entry"}'
+    --data '{"domain":"example.com","description":"An optional comment added to the entry"}' \
     localhost:3000/api/v1/aliases
 ```
 
