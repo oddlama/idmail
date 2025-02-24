@@ -219,6 +219,8 @@ The required API token can be generated on the settings page when logging into t
 - Token: Via header `Authorization: Bearer {token}`
 - Success: `201`
 
+- In Bitwarden, just use `idmail.example.com` as the endpoint.
+
 <details>
 <summary>Example request and response (curl)</summary>
 
@@ -279,6 +281,8 @@ Response:
 - Method: `POST`
 - Token: Via header `Authorization: {token}`
 - Success: `201`
+
+- In Bitwarden, just use `idmail.example.com` as the endpoint.
 
 <details>
 <summary>Example request and response (curl)</summary>
