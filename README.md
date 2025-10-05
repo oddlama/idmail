@@ -367,10 +367,6 @@ path = "/path/to/idmail.db"
 type = "sqlite"
 
 [store.idmail.query]
-domains = """\
-SELECT domain FROM domains \
-    WHERE domain = ?1 \
-"""
 emails = """\
 SELECT address FROM ( \
     SELECT m.address AS address, 1 AS rowOrder \
@@ -395,24 +391,6 @@ SELECT address FROM ( \
         WHERE d.catch_all = ?1 AND d.active = true AND m.active = true AND u.active = true \
     ORDER BY rowOrder, address ASC \
 ) \
-"""
-expand = """\
-SELECT m.address AS address FROM mailboxes AS m \
-    JOIN domains AS d ON m.domain = d.domain \
-    JOIN users AS u ON m.owner = u.username \
-    WHERE m.address = ?1 AND m.active = true AND d.active = true AND u.active = true \
-UNION SELECT a.address AS address FROM aliases AS a \
-    JOIN domains AS d ON a.domain = d.domain \
-    JOIN ( \
-        SELECT username FROM users \
-            WHERE active = true \
-        UNION SELECT m.address AS username FROM mailboxes AS m \
-            JOIN users AS u ON m.owner = u.username \
-            WHERE m.active = true AND u.active = true \
-    ) AS u ON a.owner = u.username \
-    WHERE a.address = ?1 AND a.active = true AND d.active = true \
-ORDER BY address \
-LIMIT 50 \
 """
 members = ""
 name = """\
@@ -448,24 +426,6 @@ SELECT name FROM ( \
     ORDER BY rowOrder, name ASC \
     LIMIT 1 \
 ) \
-"""
-verify = """\
-SELECT m.address AS address FROM mailboxes AS m \
-    JOIN domains AS d ON m.domain = d.domain \
-    JOIN users AS u ON m.owner = u.username \
-    WHERE m.address LIKE '%' || ?1 || '%' AND m.active = true AND d.active = true AND u.active = true \
-UNION SELECT a.address AS address FROM aliases AS a \
-    JOIN domains AS d ON a.domain = d.domain \
-    JOIN ( \
-        SELECT username FROM users \
-            WHERE active = true \
-        UNION SELECT m.address AS username FROM mailboxes AS m \
-            JOIN users AS u ON m.owner = u.username \
-            WHERE m.active = true AND u.active = true \
-    ) AS u ON a.owner = u.username \
-    WHERE a.address LIKE '%' || ?1 || '%' AND a.active = true AND d.active = true \
-ORDER BY address \
-LIMIT 5 \
 """
 ```
 </details>
