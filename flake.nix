@@ -55,32 +55,21 @@
         let
           projectName = "idmail";
 
-          tailwindcss = pkgs.nodePackages.tailwindcss.overrideAttrs (_prevAttrs: {
-            plugins = [
-              pkgs.nodePackages."@tailwindcss/aspect-ratio"
-              pkgs.nodePackages."@tailwindcss/forms"
-              pkgs.nodePackages."@tailwindcss/language-server"
-              pkgs.nodePackages."@tailwindcss/line-clamp"
-              pkgs.nodePackages."@tailwindcss/typography"
-            ];
-          });
-
           extraNativeBuildInputs = [
-            pkgs.wasm-bindgen-cli
+            pkgs.wasm-bindgen-cli_0_2_106
             pkgs.binaryen
             pkgs.cargo-leptos
-            tailwindcss
+            pkgs.tailwindcss_3
           ];
         in
         {
           devshells.default = {
-            packages =
-              [
-                config.treefmt.build.wrapper
-                pkgs.cargo-release
-              ]
-              # FIXME: why is this necessary? nci doesn't seem to add them automatically.
-              ++ extraNativeBuildInputs;
+            packages = [
+              config.treefmt.build.wrapper
+              pkgs.cargo-release
+            ]
+            # FIXME: why is this necessary? nci doesn't seem to add them automatically.
+            ++ extraNativeBuildInputs;
             devshell.startup.pre-commit.text = config.pre-commit.installationScript;
           };
 
@@ -105,7 +94,8 @@
                 # add trunk and other dependencies
                 nativeBuildInputs = [
                   pkgs.makeWrapper
-                ] ++ extraNativeBuildInputs;
+                ]
+                ++ extraNativeBuildInputs;
 
                 # override build phase to build with trunk instead
                 buildPhase = ''
